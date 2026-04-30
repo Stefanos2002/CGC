@@ -22,14 +22,12 @@ const Posts = async ({ params }: { params: any }) => {
 
     const genres = await extractGenres();
 
-    const descriptioned = await Promise.all(
-      gameData.map((item) => fetchGameDetails(item))
+    sortGamesByRelease(gameData);
+    const paginatedGames = paginateGames(gameData, params.page, pageSize);
+
+    const detailedGames = await Promise.all(
+      paginatedGames.map((item) => fetchGameDetails(item)),
     );
-
-    sortGamesByRelease(descriptioned);
-
-    const paginatedGames = paginateGames(descriptioned, params.page, pageSize);
-    // Now paginate the unique games list
 
     return (
       <div>
@@ -37,11 +35,11 @@ const Posts = async ({ params }: { params: any }) => {
           <NavBar />
           <Sort />
           <Genres genres={genres} />
-          <GameList paginatedGames={paginatedGames} />
+          <GameList paginatedGames={detailedGames} />
           <Buttons
             link={`/Games/page`}
             page={Number(params.page)}
-            gamesLength={descriptioned.length}
+            gamesLength={gameData.length}
           />
           <Footer />
         </MainPage>

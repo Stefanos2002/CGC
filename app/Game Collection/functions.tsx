@@ -21,11 +21,24 @@ const apiPosterUrl = `${basePosterUrl}?${apiPosterKey}`;
 async function init(): Promise<void> {
   if (db) return;
   try {
+    console.log("Initializing database connection...");
     client = await clientPromise;
+    console.log("Client connected, getting database...");
     db = await client.db();
+    console.log("Database obtained, getting games collection...");
     games = await db.collection("games");
-    await games.createIndex({ released: 1 });
+    console.log("Games collection obtained, creating indexes...");
+    await games.createIndex({ id: 1 }, { unique: true, background: true });
+    await games.createIndex({ slug: 1 }, { background: true });
+    await games.createIndex({ released: 1 }, { background: true });
+    await games.createIndex({ "genres.slug": 1 }, { background: true });
+    await games.createIndex(
+      { "parent_platforms.platform.id": 1 },
+      { background: true },
+    );
+    console.log("Database initialization complete");
   } catch (error) {
+    console.error("Failed to establish connection to database:", error);
     throw new Error("Failed to establish connection to database");
   }
 }
@@ -38,12 +51,21 @@ async function init(): Promise<void> {
 //THIS FUNCTION RETURNS THE GAME DATA PER PAGE (STARTING FROM PAGE 1)
 const getGameData = async (url: string, page: number) => {
   try {
-    const res = await fetch(`${url}&page=${page}`);
+    const fullUrl = `${url}&page=${page}`;
+    console.log(`Fetching from RAWG API: ${fullUrl}`);
+    const res = await fetch(fullUrl);
     if (!res.ok) {
+      console.error(`RAWG API returned ${res.status} for URL: ${fullUrl}`);
+      if (res.status === 404) {
+        console.error(
+          "This might indicate an invalid API key or changed API endpoint",
+        );
+      }
       throw new Error(`HTTP error! status: ${res.status}`);
     }
     const data = await res.json();
     if (!data || !data.results) {
+      console.error("RAWG API returned invalid data structure:", data);
       throw new Error("Invalid data structure");
     }
     return data.results as PostResult[];
@@ -53,104 +75,216 @@ const getGameData = async (url: string, page: number) => {
   }
 };
 
+const minimalGameProjection = {
+  id: 1,
+  released: 1,
+  rating: 1,
+  ratings_count: 1,
+  tba: 1,
+  parent_platforms: 1,
+  genres: 1,
+  slug: 1,
+  name: 1,
+  background_image: 1,
+  rating_top: 1,
+  metacritic: 1,
+  description_raw: 1,
+  esrb_rating: 1,
+};
+
+const normalizeGameDocument = (game: any): PostResult => ({
+  ...game,
+  _id: game._id?.toString(),
+});
+
+const MIN_RELEASE_DATE = new Date("2000-01-01");
+const MAX_RELEASE_DATE = new Date("2026-12-31");
+const MAX_STORED_GAMES = 2000;
+const MAINSTREAM_MIN_RATING = 3.8;
+const MAINSTREAM_MIN_RATINGS_COUNT = 20;
+const MAINSTREAM_MIN_METACRITIC = 60;
+const RANGE_PAGE_SIZE = 40;
+
+const EDITION_KEYWORDS = [
+  "director's cut", "directors cut", "definitive edition", "remastered",
+  "enhanced edition", "royal edition", "complete edition", "game of the year",
+  "goty edition", "anniversary edition", "deluxe edition", "ultimate edition",
+  "legendary edition", "gold edition", "expanded edition", "extended edition",
+  "redux", "remaster",
+];
+
+const validGameFilter = {
+  released: { $gte: "2000-01-01", $lte: "2026-12-31" },
+  tba: { $ne: true },
+};
+
+const parseDateString = (value?: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isEditionVariant = (game: Partial<PostResult>): boolean => {
+  if (!game.name) return false;
+  const lower = game.name.toLowerCase();
+  return EDITION_KEYWORDS.some((kw) => lower.includes(kw));
+};
+
+const isAdultGame = (game: Partial<PostResult>): boolean => {
+  return (game as any).esrb_rating?.slug === "adults-only";
+};
+
+const EXCLUDED_GENRE_SLUGS = ["simulation", "casual", "puzzle"];
+
+const hasExcludedGenre = (game: Partial<PostResult>): boolean => {
+  if (!game.genres || !Array.isArray(game.genres)) return false;
+  return game.genres.some((g) => EXCLUDED_GENRE_SLUGS.includes(g.slug));
+};
+
+const isGameReleasedAndInRange = (game: Partial<PostResult>) => {
+  if (game.tba === true) return false;
+  const releaseDate = parseDateString(game.released);
+  if (!releaseDate) return false;
+  const today = new Date();
+  if (releaseDate > today) return false;
+  return releaseDate >= MIN_RELEASE_DATE && releaseDate <= MAX_RELEASE_DATE;
+};
+
+const isMainstreamGame = (game: Partial<PostResult>) => {
+  if (!isGameReleasedAndInRange(game)) return false;
+  if (isEditionVariant(game)) return false;
+  if (isAdultGame(game)) return false;
+  if (hasExcludedGenre(game)) return false;
+  const rating = Number(game.rating ?? 0);
+  const metacritic = Number(game.metacritic ?? 0);
+  const ratingCount = Number(game.ratings_count ?? 0);
+
+  if (ratingCount < MAINSTREAM_MIN_RATINGS_COUNT) return false;
+  return rating >= MAINSTREAM_MIN_RATING || metacritic >= MAINSTREAM_MIN_METACRITIC;
+};
+
 let cachedGames: PostResult[] | null = null;
+let lastUpdated: Date | null = null;
 
 //MAIN FUNCTION RETURNING GAMES BASED ON YEAR
 export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
   const currentTime = new Date();
 
   //LOGIC TO RETURN NEW UPDATED CONTENT IF A MONTH HAS PASSED
-  if (cachedG && lastUpdated) {
+  if (cachedGames && lastUpdated) {
     const timeDifference = currentTime.getTime() - lastUpdated.getTime();
     const oneMonthInMs = 30 * 24 * 60 * 60 * 1000; // Approximate one month in milliseconds
 
     if (timeDifference < oneMonthInMs) {
       console.log("Returning cached games");
-      return cachedG;
+      return cachedGames;
     }
   }
 
   try {
-    if (!games) await init(); // Initialize games collection if not done yet
-    if (!games) throw new Error("Games collection is not initialized");
+    const gameCollection = await getGamesCollection();
 
-    const currentYear: number = new Date().getFullYear();
-    const startYear: number = currentYear - 15;
     const dateRanges: string[] = [];
-
-    for (let year = startYear; year <= currentYear; year += 5) {
-      const endYear = Math.min(year + 4, currentYear);
+    for (let year = 2000; year <= 2026; year += 5) {
+      const endYear = Math.min(year + 4, 2026);
       dateRanges.push(`${year}-01-01,${endYear}-12-31`);
     }
-    // Fetch all ranges in parallel
-    const allGames = await Promise.all(
-      dateRanges.map(async (dateRange) => {
-        try {
-          // Query MongoDB for games in this date range
-          const pageSize = 40;
-          const gamesInRange = (await games
-            ?.find<PostResult>({
-              released: {
-                $gte: `${dateRange.split(",")[0]}`,
-                $lte: `${dateRange.split(",")[1]}`,
-              },
-            })
-            .limit(pageSize)
-            .project({
-              id: 1,
-              released: 1,
-              rating: 1,
-              parent_platforms: 1,
-              genres: 1,
-              slug: 1,
-              name: 1,
-              background_image: 1,
-            })
-            .toArray()) as PostResult[];
+    dateRanges.reverse(); // most recent years first so new games get priority
 
-          // Convert ObjectId to string if MongoDB returns games
-          const processedGames = gamesInRange.map((game) => ({
-            ...game,
-            _id: game._id.toString(), // Convert ObjectId to string
+    const existingDocs = (await gameCollection
+      .find<PostResult>({
+        ...validGameFilter,
+      })
+      .project(minimalGameProjection)
+      .toArray()) as PostResult[];
+
+    const existingGames = existingDocs
+      .map(normalizeGameDocument)
+      .filter(isMainstreamGame);
+
+    const existingIds = new Set(existingGames.map((game) => game.id));
+    let remainingSpace = Math.max(0, MAX_STORED_GAMES - existingGames.length);
+    const allGames: PostResult[] = [...existingGames];
+
+    if (remainingSpace <= 0) {
+      cachedGames = allGames.slice(0, MAX_STORED_GAMES);
+      lastUpdated = new Date();
+      console.log(`DB already has ${cachedGames.length} mainstream games`);
+      return cachedGames;
+    }
+
+    for (const dateRange of dateRanges) {
+      if (remainingSpace <= 0) break;
+      const [start, end] = dateRange.split(",");
+      console.log(`Checking date range: ${dateRange}`);
+
+      for (let page = 1; page <= 20 && remainingSpace > 0; page += 1) {
+        let dateRangeUrl = `${apiPosterUrl}&dates=${dateRange}&ordering=-added&metacritic=${MAINSTREAM_MIN_METACRITIC}..100&page_size=${RANGE_PAGE_SIZE}`;
+        let gameResults = await getGameData(dateRangeUrl, page);
+
+        // If metacritic filter fails, try without it
+        if (!gameResults || gameResults.length === 0) {
+          console.log(
+            `Retrying ${dateRange} page ${page} without metacritic filter`,
+          );
+          dateRangeUrl = `${apiPosterUrl}&dates=${dateRange}&ordering=-added&page_size=${RANGE_PAGE_SIZE}`;
+          gameResults = await getGameData(dateRangeUrl, page);
+        }
+
+        if (!gameResults.length) {
+          console.log(`No results for ${dateRange} page ${page}`);
+          break;
+        }
+
+        const filteredResults = gameResults
+          .filter(isMainstreamGame)
+          .filter((game) => !existingIds.has(game.id));
+
+        if (!filteredResults.length) {
+          if (page === 1) {
+            console.log(
+              `No mainstream RAWG results for date range ${dateRange}`,
+            );
+          }
+          if (gameResults.length < RANGE_PAGE_SIZE) break;
+          continue;
+        }
+
+        const gamesToInsert = filteredResults.slice(0, remainingSpace);
+
+        if (gamesToInsert.length > 0) {
+          const bulkOperations = gamesToInsert.map((game) => ({
+            updateOne: {
+              filter: { id: game.id },
+              update: { $set: { ...game } },
+              upsert: true,
+            },
           }));
 
-          // Fallback to RAWG API if no games found in the database
-          if (!processedGames.length) {
-            console.log(
-              `No games found for date range: ${dateRange}, fetching from RAWG API...`
-            );
+          await gameCollection.bulkWrite(bulkOperations, {
+            ordered: false,
+          });
 
-            const dateRangeUrl = `${apiPosterUrl}&dates=${dateRange}&page_size=40`;
-            const gameResults = await getGameData(dateRangeUrl, 1);
-            const slicedResults = gameResults.slice(0, 40);
+          gamesToInsert.forEach((game) => {
+            existingIds.add(game.id);
+            allGames.push(normalizeGameDocument(game));
+          });
 
-            // Upsert games fetched from RAWG API into MongoDB
-            if (slicedResults.length) {
-              const bulkOperations = slicedResults.map((game) => ({
-                updateOne: {
-                  filter: { id: game.id }, // Use 'id' as unique key
-                  update: { $set: { ...game } },
-                  upsert: true,
-                },
-              }));
-              await games?.bulkWrite(bulkOperations, { ordered: false });
-            }
-
-            // Return the newly fetched results
-            return slicedResults;
-          } else {
-            return processedGames;
-          }
-        } catch (error) {
-          console.error(`Error processing date range ${dateRange}:`, error);
-          return [];
+          remainingSpace = Math.max(0, remainingSpace - gamesToInsert.length);
+          console.log(
+            `Inserted ${gamesToInsert.length} games for ${dateRange} page ${page}`,
+          );
         }
-      })
-    );
 
-    // Flatten the array of arrays
-    cachedGames = allGames.flat();
-    lastUpdated = new Date(); // Update the last updated time
+        if (gameResults.length < RANGE_PAGE_SIZE) {
+          break;
+        }
+      }
+    }
+
+    cachedGames = allGames.slice(0, MAX_STORED_GAMES);
+    lastUpdated = new Date();
+    console.log(`Total games fetched: ${cachedGames.length}`);
     return cachedGames;
   } catch (error) {
     console.error("Error fetching and combining data:", error);
@@ -166,9 +300,6 @@ export const sortGamesByRelease = (games: PostResult[]) => {
   });
 };
 
-let cachedG: PostResult[] | null = null;
-let lastUpdated: Date | null = null;
-
 export const extractGenres = async () => {
   try {
     const games = await fetchAndCombineDataSimple();
@@ -179,7 +310,7 @@ export const extractGenres = async () => {
         game.genres.forEach((genre) => {
           // Only add the genre if there isn't already one in the set with the same ID
           const existingGenre = Array.from(genresSet).find(
-            (g) => g.id === genre.id
+            (g) => g.id === genre.id,
           );
           if (!existingGenre) {
             genresSet.add(genre);
@@ -212,170 +343,214 @@ const platformIds: { [key: string]: number } = {
   nintendo: 7,
 };
 
-//this works for the company logo games
+const convertDocuments = (docs: PostResult[]) =>
+  docs.map(normalizeGameDocument);
+
+export const getGamesCollection = async (): Promise<Collection<Document>> => {
+  try {
+    const client = await clientPromise;
+    const db = client.db();
+    const games = db.collection("games");
+    return games;
+  } catch (error) {
+    console.error("Error getting games collection:", error);
+    throw error;
+  }
+};
+
+// this works for the company logo games
 export const fetchAndCombineData = async (name: string) => {
   const platformId = platformIds[name.toLowerCase()];
   if (!platformId) {
     throw new Error(`Invalid platform name: ${name}`);
   }
-  // Get all games fetched by the first function
-  const allGames = await fetchAndCombineDataSimple();
 
-  // Filter games based on the platform ID
-  const filteredGames = allGames.filter((game) =>
-    game.parent_platforms?.some(
-      (platform: Platform) => platform.platform.id === platformId
-    )
-  );
+  const gameCollection = await getGamesCollection();
+  const filteredGames = (await gameCollection
+    .find<PostResult>({
+      ...validGameFilter,
+      "parent_platforms.platform.id": platformId,
+    })
+    .project(minimalGameProjection)
+    .toArray()) as PostResult[];
 
-  return filteredGames;
+  return convertDocuments(filteredGames);
 };
 
-//this works for the company page games
+// this works for the company page games
 export const fetchByGenre = async (slug: string) => {
-  // Get all games fetched by the first function
-  const allGames = await fetchAndCombineDataSimple();
+  const gameCollection = await getGamesCollection();
+  const filteredGames = (await gameCollection
+    .find<PostResult>({
+      ...validGameFilter,
+      "genres.slug": slug,
+    })
+    .project(minimalGameProjection)
+    .toArray()) as PostResult[];
 
-  // Filter games based on the genre name
-  const filteredGames = allGames.filter((game) =>
-    game.genres?.some((genre) => genre.slug === slug)
-  );
-
-  return filteredGames;
+  return convertDocuments(filteredGames);
 };
 
 export const fetchByGenreName = async (name: string) => {
-  // Get all games fetched by the first function
   const allGames = await fetchByGenre(name);
-
-  // Sort the games by rating in descending order
-  const sortedGames = allGames.sort((a, b) => a.name.localeCompare(b.name));
-
-  // Return the sorted games
-  return sortedGames;
+  return allGames.slice().sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export const fetchByGenreRating = async (name: string) => {
-  // Get all games fetched by the first function
   const allGames = await fetchByGenre(name);
-
-  // Sort the games by rating in descending order
-  const sortedGames = allGames.sort((a, b) => b.rating - a.rating);
-
-  // Return the sorted games
-  return sortedGames;
+  return allGames.slice().sort((a, b) => b.rating - a.rating);
 };
 
 export const fetchByGenreConsole = async (name: string, slug: string) => {
-  // Get all games fetched by the first function
-  const allGames = await fetchAndCombineData(name);
+  const platformId = platformIds[name.toLowerCase()];
+  if (!platformId) {
+    throw new Error(`Invalid platform name: ${name}`);
+  }
 
-  // Filter games based on the genre name
-  const filteredGames = allGames.filter((game) =>
-    game.genres?.some((genre) => genre.slug === slug)
-  );
+  const gameCollection = await getGamesCollection();
+  const filteredGames = (await gameCollection
+    .find<PostResult>({
+      ...validGameFilter,
+      "parent_platforms.platform.id": platformId,
+      "genres.slug": slug,
+    })
+    .project(minimalGameProjection)
+    .toArray()) as PostResult[];
 
-  return filteredGames;
+  return convertDocuments(filteredGames);
 };
 
 export const fetchByGenreConsoleName = async (name: string, slug: string) => {
-  // Get all games fetched by the first function
   const allGames = await fetchByGenreConsole(name, slug);
-
-  // Sort the games by rating in descending order
-  const sortedGames = allGames.sort((a, b) => a.name.localeCompare(b.name));
-
-  // Return the sorted games
-  return sortedGames;
+  return allGames.slice().sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export const fetchByGenreConsoleRating = async (name: string, slug: string) => {
-  // Get all games fetched by the first function
   const allGames = await fetchByGenreConsole(name, slug);
-
-  // Sort the games by rating in descending order
-  const sortedGames = allGames.sort((a, b) => b.rating - a.rating);
-
-  // Return the sorted games
-  return sortedGames;
+  return allGames.slice().sort((a, b) => b.rating - a.rating);
 };
 
-//this function sorts the greatest games first
+// this function sorts the greatest games first
 export const fetchByRating = async () => {
-  // Get all games fetched by the first function
-  const allGames = await fetchAndCombineDataSimple();
+  const gameCollection = await getGamesCollection();
+  const sortedGames = (await gameCollection
+    .find<PostResult>({
+      ...validGameFilter,
+    })
+    .project(minimalGameProjection)
+    .sort({ rating: -1 })
+    .toArray()) as PostResult[];
 
-  // Sort the games by rating in descending order
-  const sortedGames = allGames.sort((a, b) => b.rating - a.rating);
-
-  // Return the sorted games
-  return sortedGames;
+  return convertDocuments(sortedGames);
 };
 
-//this function sorts the greatest games first
+// this function sorts the greatest games first
 export const fetchByName = async () => {
-  // Get all games fetched by the first function
-  const allGames = await fetchAndCombineDataSimple();
+  const gameCollection = await getGamesCollection();
+  const sortedGames = (await gameCollection
+    .find<PostResult>({
+      ...validGameFilter,
+    })
+    .project(minimalGameProjection)
+    .sort({ name: 1 })
+    .toArray()) as PostResult[];
 
-  // Sort the games by rating in descending order
-  const sortedGames = allGames.sort((a, b) => a.name.localeCompare(b.name));
-
-  // Return the sorted games
-  return sortedGames;
+  return convertDocuments(sortedGames);
 };
 
-//this function sorts the greatest games first
+// this function sorts the greatest games first
 export const fetchByRatingConsole = async (name: string) => {
-  // Get all games fetched by the first function
-  const allGames = await fetchAndCombineData(name);
+  const platformId = platformIds[name.toLowerCase()];
+  if (!platformId) {
+    throw new Error(`Invalid platform name: ${name}`);
+  }
 
-  // Sort the games by rating in descending order
-  const sortedGames = allGames.sort((a, b) => b.rating - a.rating);
+  const gameCollection = await getGamesCollection();
+  const sortedGames = (await gameCollection
+    .find<PostResult>({
+      ...validGameFilter,
+      "parent_platforms.platform.id": platformId,
+    })
+    .project(minimalGameProjection)
+    .sort({ rating: -1 })
+    .toArray()) as PostResult[];
 
-  // Return the sorted games
-  return sortedGames;
+  return convertDocuments(sortedGames);
 };
 
-//this function sorts by name alphabetically
+// this function sorts by name alphabetically
 export const fetchByNameConsole = async (name: string) => {
-  // Get all games fetched by the first function
-  const allGames = await fetchAndCombineData(name);
+  const platformId = platformIds[name.toLowerCase()];
+  if (!platformId) {
+    throw new Error(`Invalid platform name: ${name}`);
+  }
 
-  // Sort the games by name in descending order
-  const sortedGames = allGames.sort((a, b) => a.name.localeCompare(b.name));
+  const gameCollection = await getGamesCollection();
+  const sortedGames = (await gameCollection
+    .find<PostResult>({
+      ...validGameFilter,
+      "parent_platforms.platform.id": platformId,
+    })
+    .project(minimalGameProjection)
+    .sort({ name: 1 })
+    .toArray()) as PostResult[];
 
-  // Return the sorted games
-  return sortedGames;
+  return convertDocuments(sortedGames);
 };
 
 //FUNCTION THAT RETURNS 15 GAMES PER PAGE
 export const paginateGames = (
   games: PostResult[],
   page: number,
-  pageSize: number
+  pageSize: number,
 ) => {
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
   return games.slice(start, end);
 };
 
+const hasFullDetails = (game: PostResult) => {
+  return Boolean(
+    game.description_raw &&
+    game.parent_platforms &&
+    game.genres &&
+    game.slug &&
+    game.background_image,
+  );
+};
+
 //FUNCTION TO GET GAME DETAILS
 export const fetchGameDetails = async (game: PostResult) => {
   try {
+    if (hasFullDetails(game)) return game;
+
+    const gameCollection = await getGamesCollection();
+    const existingGame = await gameCollection.findOne<PostResult>({
+      id: game.id,
+    });
+    if (existingGame && existingGame.description_raw) {
+      return normalizeGameDocument({ ...existingGame, ...game });
+    }
+
     const gameRes = await fetch(`${basePosterUrl}/${game.id}?${apiPosterKey}`);
     if (!gameRes.ok) {
       throw new Error(`HTTP error! status: ${gameRes.status}`);
     }
+
     const gameData = await gameRes.json();
-    return {
+    const detailedGame = {
       ...game,
-      parent_platforms: gameData.parent_platforms,
-      genres: gameData.genres,
-      slug: gameData.slug,
-      name: gameData.name,
-      background_image: gameData.background_image,
-      description_raw: gameData.description_raw,
+      ...gameData,
+      _id: existingGame?._id?.toString() || game._id,
     };
+
+    await gameCollection.updateOne(
+      { id: game.id },
+      { $set: { ...gameData, id: gameData.id } },
+      { upsert: true },
+    );
+
+    return normalizeGameDocument(detailedGame as PostResult);
   } catch (error) {
     console.error("Error fetching game details:", error);
     throw error;
@@ -416,7 +591,7 @@ export const convertToStars = (rating: number) => {
           fontSize: "24px",
           padding: "2px",
         }}
-      />
+      />,
     );
   }
 
@@ -430,7 +605,7 @@ export const convertToStars = (rating: number) => {
           fontSize: "24px",
           padding: "2px",
         }}
-      />
+      />,
     );
   }
 
@@ -444,7 +619,7 @@ export const convertToStars = (rating: number) => {
           fontSize: "24px",
           padding: "2px",
         }}
-      />
+      />,
     );
   }
 
@@ -453,9 +628,26 @@ export const convertToStars = (rating: number) => {
 
 //FUNCTION TO FETCH GAME INFORMATION (USED ON PAGE UNDER NAME)
 export const getGameInfoByName = async (name: string) => {
-  const res = await fetch(basePosterUrl + "/" + name + "?" + apiPosterKey);
+  const gameCollection = await getGamesCollection();
+
+  const existingGame = await gameCollection.findOne<PostResult>({ slug: name });
+  if (existingGame && existingGame.description_raw) {
+    return normalizeGameDocument(existingGame);
+  }
+
+  const res = await fetch(`${basePosterUrl}/${name}?${apiPosterKey}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch game info: ${res.statusText}`);
+  }
+
   const data = await res.json();
-  return data;
+  await gameCollection.updateOne(
+    { id: data.id },
+    { $set: { ...data, id: data.id } },
+    { upsert: true },
+  );
+
+  return normalizeGameDocument({ ...data } as PostResult);
 };
 
 //FUNCTIONS TO FETCH USER REVIEWS ON ALL USERS BASED ON GAME
@@ -466,7 +658,7 @@ export const getUserReviews = async (allUsers: User[], gameId: number) => {
       (user.user_reviews || []).map((review) => ({
         ...review,
         username: user.username || user.name,
-      }))
+      })),
     ) // Flatten all user reviews from each user
     .filter((review) => review.gameId === gameId) // Filter reviews by gameId
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -482,7 +674,7 @@ export async function getScreenshots(slug: string) {
       {
         // Adding no-store ensures fresh data on each request if needed
         cache: "no-store",
-      }
+      },
     );
 
     if (!res.ok) {

@@ -100,6 +100,12 @@ export interface Genre {
   slug: string;
 }
 
+export interface EsrbRating {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export interface PostResult {
   _id: string;
   id: number;
@@ -116,6 +122,7 @@ export interface PostResult {
   description_raw: string;
   parent_platforms: Platform[];
   genres: Genre[];
+  esrb_rating?: EsrbRating;
 }
 
 //interfaces used on layout

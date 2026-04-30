@@ -22,12 +22,11 @@ const Posts = async ({ params }: { params: any }) => {
 
     const genres = await extractGenres();
 
-    //fetch game description only for the paginated games not for all the games
+    sortGamesByRelease(gameData);
+    const paginatedGames = paginateGames(gameData, params.page, pageSize);
     const detailedGames = await Promise.all(
-      gameData.map((item) => fetchGameDetails(item))
+      paginatedGames.map((item) => fetchGameDetails(item)),
     );
-    sortGamesByRelease(detailedGames);
-    const paginatedGames = paginateGames(detailedGames, params.page, pageSize);
 
     return (
       <div>

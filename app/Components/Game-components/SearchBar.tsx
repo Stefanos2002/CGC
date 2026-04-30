@@ -18,7 +18,7 @@ interface PostResult {
 }
 
 interface SearchBarProps {
-  games: PostResult[];
+  // No props needed anymore
 }
 
 const convertToStars = (rating: number) => {
@@ -46,7 +46,7 @@ const convertToStars = (rating: number) => {
           fontSize: "24px",
           padding: "2px",
         }}
-      />
+      />,
     );
   }
 
@@ -60,7 +60,7 @@ const convertToStars = (rating: number) => {
           fontSize: "24px",
           padding: "2px",
         }}
-      />
+      />,
     );
   }
 
@@ -74,49 +74,81 @@ const convertToStars = (rating: number) => {
           fontSize: "24px",
           padding: "2px",
         }}
-      />
+      />,
     );
   }
 
   return stars;
 };
 
-const SearchBar: React.FC<SearchBarProps> = ({ games }) => {
+const SearchBar: React.FC<SearchBarProps> = () => {
   const [search, setSearch] = useState<PostResult[]>([]);
-  const [inputValue, setInputValue] = useState(""); // State to manage input value // State to manage input value
+  const [inputValue, setInputValue] = useState(""); // State to manage input value
   const [visible, setVisible] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1); // State to manage the selected index
+  const [isLoading, setIsLoading] = useState(false);
   const resultsRef = useRef<HTMLFormElement>(null);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced search function
+  const performSearch = async (query: string) => {
+    if (query.length < 2) {
+      setSearch([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `/api/searchGames?q=${encodeURIComponent(query)}`,
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSearch(data.results || []);
+      } else {
+        setSearch([]);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearch([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   //handle case as you are writting in the search
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setIsTyping(e.target.value.length > 0);
+    setIsTyping(value.length > 0);
     setInputValue(value);
     setVisible(true);
     const lowercaseValue = value.toLowerCase();
     const searchElement = document.querySelector(".search") as HTMLElement;
+
     if (lowercaseValue === "") {
       setSearch([]);
       setSelectedIndex(-1);
+      setIsLoading(false);
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
       if (searchElement) {
         resetSearchElementStyles(searchElement);
       }
     } else {
-      const filteredGames = games
-        .filter((game) =>
-          game.name
-            .toLowerCase()
-            .replaceAll(".", "")
-            .replaceAll("'", "")
-            .startsWith(lowercaseValue)
-        )
-        .slice(0, 5);
+      // Clear previous timer
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
 
-      setSearch(filteredGames);
+      // Set new timer for debounced search
+      debounceTimer.current = setTimeout(() => {
+        performSearch(lowercaseValue);
+      }, 300); // 300ms debounce
+
       setSelectedIndex(-1);
-    } // Update search results
+    }
   };
 
   const resetSearchElementStyles = (element: HTMLElement) => {
@@ -224,7 +256,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ games }) => {
     };
 
     const inputElement = document.querySelector(
-      'input[type="search"]'
+      'input[type="search"]',
     ) as HTMLInputElement;
 
     if (inputElement) {
@@ -289,12 +321,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ games }) => {
               className="flex flex-row transition-all duration-300 ease-in-out hover:scale-[1.02] pl-6 hover:text-stone-400"
             >
               <div className="relative overflow-hidden sm:w-44 sm:h-32 min-[420px]:w-40 min-[420px]:h-28 w-36 h-24 flex-shrink-0 flex-grow-0">
-                <Image
-                  src={result.background_image}
-                  alt={result.name}
-                  className="w-full h-full object-contain"
-                  fill
-                />
+                {result.background_image && (
+                  <Image
+                    src={result.background_image}
+                    alt={result.name}
+                    className="w-full h-full object-contain"
+                    fill
+                  />
+                )}
               </div>
               <div className="flex flex-col">
                 <div

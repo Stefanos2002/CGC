@@ -10,7 +10,6 @@ import Logout from "../Logout";
 import { useSession } from "next-auth/react";
 import defaultAvatar from "@/public/assets/images/default_avatar.jpg";
 import SearchBar from "./SearchBar";
-import { PostResult } from "@/app/Constants/constants";
 import Image from "next/image";
 
 const logos = [
@@ -24,13 +23,12 @@ const NavBar = () => {
   const [user, setUser] = useState<any>(null);
   const [showmenu, setShowMenu] = useState(false);
   const [openMenu, setisOpenMenu] = useState(false);
-  const [games, setGames] = useState<PostResult[]>([]);
   const [showProfile, setShowProfile] = useState(false);
   const { data: session, status } = useSession();
   const profileRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isWideScreen, setIsWideScreen] = useState<boolean | undefined>(
-    undefined
+    undefined,
   );
 
   // Handle window resize
@@ -91,7 +89,7 @@ const NavBar = () => {
         try {
           // Fetch response using the email as a query param
           const response = await fetch(
-            `/api/getUserDetails/${session.user.email}`
+            `/api/getUserDetails/${session.user.email}`,
           );
 
           if (!response.ok) {
@@ -116,34 +114,6 @@ const NavBar = () => {
 
     fetchProfileDetails();
   }, [session?.user?.email]); // Only re-run this effect if the session changes\
-
-  useEffect(() => {
-    const fetchGames = async () => {
-      try {
-        // Fetch response using the email as a query param
-        const response = await fetch(`/api/fetchGames/`);
-
-        if (!response.ok) {
-          console.error("Error fetching user details:", response.statusText);
-          return;
-        }
-
-        // Parse the response as JSON
-        const data = await response.json();
-
-        // Check if the data contains a valid id
-        if (data.results && Array.isArray(data.results)) {
-          setGames(data.results);
-        } else {
-          console.log("No games found.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch games:", error);
-      }
-    };
-
-    fetchGames();
-  }, []);
 
   return (
     <nav className="w-full flex justify-between gap-6 items-center sticky top-0 bg-black h-20 z-20">
@@ -203,7 +173,7 @@ const NavBar = () => {
           )}
         </div>
       </div>
-      <SearchBar games={games} />
+      <SearchBar />
       {isWideScreen !== undefined &&
         (isWideScreen ? (
           <div className="right-side-elements flex items-center gap-3 pr-6 relative h-full">
