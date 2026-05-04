@@ -113,7 +113,7 @@ const GameDets = async ({ params }: { params: any }) => {
               <span className="lg:text-md min-[450px]:text-lg text-md font-bold">
                 Playtime:
               </span>
-              {game.playtime > 0 ? (
+              {game.playtime && game.playtime > 0 ? (
                 <span className="lg:text-md min-[450px]:text-lg text-md">
                   about {game.playtime}h
                 </span>

@@ -121,6 +121,8 @@ export interface PostResult {
   description: string;
   description_raw: string;
   parent_platforms: Platform[];
+  platforms?: Platform[];
+  playtime?: number;
   genres: Genre[];
   esrb_rating?: EsrbRating;
 }
