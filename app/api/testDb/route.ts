@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGamesCollection } from "@/app/Game Collection/functions";
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     console.log("Testing getGamesCollection");
     const collection = await getGamesCollection();
@@ -17,11 +17,12 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Test error:", error);
+    const err = error instanceof Error ? error : new Error(String(error));
     return NextResponse.json(
       {
         success: false,
-        error: error.message,
-        stack: error.stack,
+        error: err.message,
+        stack: err.stack,
       },
       { status: 500 },
     );
