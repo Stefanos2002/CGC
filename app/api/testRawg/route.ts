@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     // Test basic RAWG API call
     const baseUrl = process.env.NEXT_PUBLIC_BASE_POSTER_URL;
@@ -32,8 +32,9 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Test API error:", error);
+    const err = error instanceof Error ? error : new Error(String(error));
     return NextResponse.json(
-      { error: "Test failed", details: error.message },
+      { error: "Test failed", details: err.message },
       { status: 500 },
     );
   }

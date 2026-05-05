@@ -6,8 +6,8 @@ import SearchBar from "@/app/Components/Game-components/SearchBar";
 import { pageSize } from "@/app/Constants/constants";
 import {
   paginateGames,
-  fetchGameDetails,
-  extractGenres,
+  fetchGameDetailsBatch,
+  getCachedGenres,
   fetchByGenreRating,
 } from "@/app/Game Collection/functions";
 import SortGenres from "@/app/Components/Game-components/SortGenres";
@@ -17,14 +17,12 @@ import Footer from "@/app/Components/Footer";
 
 const Posts = async ({ params }: { params: any }) => {
   try {
-    const gameData = await fetchByGenreRating(params.slug);
-    const genres = await extractGenres();
+    const [gameData, genres] = await Promise.all([
+      fetchByGenreRating(params.slug),
+      getCachedGenres(),
+    ]);
     const paginatedGames = paginateGames(gameData, params.page, pageSize);
-
-    //fetch game description only for the paginated games not for all the games
-    const detailedGames = await Promise.all(
-      paginatedGames.map((item) => fetchGameDetails(item))
-    );
+    const detailedGames = await fetchGameDetailsBatch(paginatedGames);
 
     return (
       <div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/authDbConnection/mongo/page";
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     console.log("Testing direct clientPromise");
     const client = await clientPromise;
@@ -22,11 +22,12 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Direct test error:", error);
+    const err = error instanceof Error ? error : new Error(String(error));
     return NextResponse.json(
       {
         success: false,
-        error: error.message,
-        stack: error.stack,
+        error: err.message,
+        stack: err.stack,
       },
       { status: 500 },
     );

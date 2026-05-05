@@ -6,14 +6,13 @@
 import {
   fetchAndCombineData,
   paginateGames,
-  fetchGameDetails,
+  fetchGameDetailsBatch,
   extractGenres,
   sortGamesByRelease,
 } from "@/app/Game Collection/functions";
 import Buttons from "@/app/Components/Game-components/Buttons";
 import MainPage from "@/app/Components/Game-components/MainPage";
 import NavBar from "@/app/Components/Game-components/NavBar";
-import SearchBar from "@/app/Components/Game-components/SearchBar";
 import { pageSize } from "@/app/Constants/constants";
 import SortConsole from "@/app/Components/Game-components/SortConsole";
 import GenresConsole from "@/app/Components/Game-components/GenresConsole";
@@ -22,15 +21,10 @@ import Footer from "@/app/Components/Footer";
 
 const Posts = async ({ params }: { params: any }) => {
   const gameData = await fetchAndCombineData(params.name);
-
-  const genres = await extractGenres();
-
+  const genres = extractGenres(gameData);
   sortGamesByRelease(gameData);
   const paginatedGames = paginateGames(gameData, params.page, pageSize);
-
-  const detailedGames = await Promise.all(
-    paginatedGames.map((item) => fetchGameDetails(item)),
-  );
+  const detailedGames = await fetchGameDetailsBatch(paginatedGames);
 
   return (
     <div>
@@ -38,7 +32,7 @@ const Posts = async ({ params }: { params: any }) => {
         <NavBar />
         <SortConsole currentName={params.name} />
         <GenresConsole genres={genres} currentName={params.name} />
-        <GameList paginatedGames={paginatedGames} />
+        <GameList paginatedGames={detailedGames} />
         <Buttons
           link={`/Games/${params.name}/page`}
           page={Number(params.page)}

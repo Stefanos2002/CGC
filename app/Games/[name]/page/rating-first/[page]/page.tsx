@@ -6,7 +6,7 @@ import SearchBar from "@/app/Components/Game-components/SearchBar";
 import { pageSize } from "@/app/Constants/constants";
 import {
   paginateGames,
-  fetchGameDetails,
+  fetchGameDetailsBatch,
   extractGenres,
   fetchByRatingConsole,
 } from "@/app/Game Collection/functions";
@@ -18,13 +18,9 @@ import Footer from "@/app/Components/Footer";
 const Posts = async ({ params }: { params: any }) => {
   try {
     const gameData = await fetchByRatingConsole(params.name);
-    const genres = await extractGenres();
+    const genres = extractGenres(gameData);
     const paginatedGames = paginateGames(gameData, params.page, pageSize);
-
-    //fetch game description only for the paginated games not for all the games
-    const detailedGames = await Promise.all(
-      paginatedGames.map((item) => fetchGameDetails(item))
-    );
+    const detailedGames = await fetchGameDetailsBatch(paginatedGames);
 
     return (
       <div>

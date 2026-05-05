@@ -2,13 +2,12 @@ import React from "react";
 import Buttons from "@/app/Components/Game-components/Buttons";
 import MainPage from "@/app/Components/Game-components/MainPage";
 import NavBar from "@/app/Components/Game-components/NavBar";
-import SearchBar from "@/app/Components/Game-components/SearchBar";
 import GenresConsole from "@/app/Components/Game-components/GenresConsole";
 import { pageSize } from "@/app/Constants/constants";
 import {
   paginateGames,
-  fetchGameDetails,
-  extractGenres,
+  fetchGameDetailsBatch,
+  getCachedGenres,
   fetchByGenreConsole,
   sortGamesByRelease,
 } from "@/app/Game Collection/functions";
@@ -18,15 +17,13 @@ import Footer from "@/app/Components/Footer";
 
 const Posts = async ({ params }: { params: any }) => {
   try {
-    const gameData = await fetchByGenreConsole(params.name, params.slug);
-
-    const genres = await extractGenres();
-
+    const [gameData, genres] = await Promise.all([
+      fetchByGenreConsole(params.name, params.slug),
+      getCachedGenres(),
+    ]);
     sortGamesByRelease(gameData);
     const paginatedGames = paginateGames(gameData, params.page, pageSize);
-    const detailedGames = await Promise.all(
-      paginatedGames.map((item) => fetchGameDetails(item)),
-    );
+    const detailedGames = await fetchGameDetailsBatch(paginatedGames);
 
     return (
       <div>
@@ -37,7 +34,7 @@ const Posts = async ({ params }: { params: any }) => {
             currentGenre={params.slug}
           />
           <GenresConsole genres={genres} currentName={params.name} />
-          <GameList paginatedGames={paginatedGames} />
+          <GameList paginatedGames={detailedGames} />
           <Buttons
             link={`/Games/${params.name}/genre/${params.slug}/page`}
             page={Number(params.page)}

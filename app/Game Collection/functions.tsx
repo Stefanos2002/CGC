@@ -1,4 +1,5 @@
 import { Collection, Db, MongoClient, Document, ObjectId } from "mongodb";
+import { unstable_cache } from "next/cache";
 import clientPromise from "../../authDbConnection/mongo/page";
 import { IoStarSharp } from "react-icons/io5";
 import { User } from "../Constants/constants";
@@ -300,33 +301,48 @@ export const sortGamesByRelease = (games: PostResult[]) => {
   });
 };
 
-export const extractGenres = async () => {
-  try {
+export const extractGenres = (games: PostResult[]): Genre[] => {
+  const genreMap = new Map<number, Genre>();
+  games.forEach((game) => {
+    if (game.genres && Array.isArray(game.genres)) {
+      game.genres.forEach((genre) => {
+        if (!genreMap.has(genre.id)) genreMap.set(genre.id, genre);
+      });
+    }
+  });
+  return Array.from(genreMap.values());
+};
+
+// Cached for genre/console+genre pages that need all genres but don't fetch all games
+export const getCachedGenres = unstable_cache(
+  async () => {
     const games = await fetchAndCombineDataSimple();
-    const genresSet = new Set<Genre>();
+    return extractGenres(games);
+  },
+  ["all-genres"],
+  { revalidate: 3600 },
+);
 
-    games.forEach((game) => {
-      if (game.genres && Array.isArray(game.genres)) {
-        game.genres.forEach((genre) => {
-          // Only add the genre if there isn't already one in the set with the same ID
-          const existingGenre = Array.from(genresSet).find(
-            (g) => g.id === genre.id,
-          );
-          if (!existingGenre) {
-            genresSet.add(genre);
-          }
-        });
-      }
-    });
-
-    // Convert the Set back to an array
-    const genresArray = Array.from(genresSet);
-
-    return genresArray;
-  } catch (error) {
-    console.error("Error in extractGenres:", error);
-    return [];
-  }
+// Single batched DB query instead of N individual findOne calls
+export const fetchGameDetailsBatch = async (
+  games: PostResult[],
+): Promise<PostResult[]> => {
+  if (!games.length) return [];
+  const gameCollection = await getGamesCollection();
+  const ids = games.map((g) => g.id);
+  const existingDocs = await gameCollection
+    .find<PostResult>({ id: { $in: ids } })
+    .toArray();
+  const docMap = new Map(
+    existingDocs.map((d) => [d.id, normalizeGameDocument(d)]),
+  );
+  return Promise.all(
+    games.map((game) => {
+      const doc = docMap.get(game.id);
+      if (doc?.description_raw) return doc;
+      return fetchGameDetails(game);
+    }),
+  );
 };
 
 // export const shuffleArray = <T,>(array: T[]): void => {
