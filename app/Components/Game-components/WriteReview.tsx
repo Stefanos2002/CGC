@@ -4,6 +4,7 @@ import Footer from "../Footer";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { PostResult } from "@/app/Constants/constants";
 
 const reactions = [
   { id: 5, reaction: "😃" },
@@ -17,25 +18,8 @@ const getReaction = (id: number) => {
   return reaction ? reaction.reaction : "❓";
 };
 
-interface PostPage {
-  id: number;
-  slug: string;
-  name: string;
-  next: string;
-  previous: string;
-  ratings_count: number;
-  ratings: [
-    {
-      id: number;
-      title: string; //this is the one I want
-      count: number;
-    }
-  ];
-  background_image: string;
-}
-
 interface Info {
-  game: PostPage;
+  game: PostResult;
 }
 
 const WriteReview: React.FC<Info> = ({ game }) => {
@@ -106,7 +90,7 @@ const WriteReview: React.FC<Info> = ({ game }) => {
     }
   };
 
-  const sortedRatings = game.ratings.sort((a: any, b: any) => b.id - a.id);
+  const sortedRatings = (game.ratings ?? []).sort((a, b) => b.id - a.id);
 
   return isSubmitted ? (
     <div className="bg-black w-full h-screen flex items-center justify-center">

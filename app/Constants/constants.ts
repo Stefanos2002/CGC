@@ -106,6 +106,12 @@ export interface EsrbRating {
   slug: string;
 }
 
+export interface Rating {
+  id: number;
+  title: string;
+  count: number;
+}
+
 export interface PostResult {
   _id: string;
   id: number;
@@ -117,6 +123,7 @@ export interface PostResult {
   rating: number;
   rating_top: number;
   ratings_count: number;
+  ratings?: Rating[];
   metacritic: number;
   description: string;
   description_raw: string;
