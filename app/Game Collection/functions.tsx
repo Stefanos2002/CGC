@@ -102,16 +102,31 @@ const MIN_RELEASE_DATE = new Date("2000-01-01");
 const MAX_RELEASE_DATE = new Date("2026-12-31");
 const MAX_STORED_GAMES = 2000;
 const MAINSTREAM_MIN_RATING = 3.8;
-const MAINSTREAM_MIN_RATINGS_COUNT = 20;
 const MAINSTREAM_MIN_METACRITIC = 60;
+const MAINSTREAM_RECENT_MONTHS = 18;
+const MAINSTREAM_RECENT_MIN_RATINGS = 15;
+const MAINSTREAM_ESTABLISHED_MIN_RATINGS = 200;
 const RANGE_PAGE_SIZE = 40;
 
 const EDITION_KEYWORDS = [
-  "director's cut", "directors cut", "definitive edition", "remastered",
-  "enhanced edition", "royal edition", "complete edition", "game of the year",
-  "goty edition", "anniversary edition", "deluxe edition", "ultimate edition",
-  "legendary edition", "gold edition", "expanded edition", "extended edition",
-  "redux", "remaster",
+  "director's cut",
+  "directors cut",
+  "definitive edition",
+  "remastered",
+  "enhanced edition",
+  "royal edition",
+  "complete edition",
+  "game of the year",
+  "goty edition",
+  "anniversary edition",
+  "deluxe edition",
+  "ultimate edition",
+  "legendary edition",
+  "gold edition",
+  "expanded edition",
+  "extended edition",
+  "redux",
+  "remaster",
 ];
 
 const validGameFilter = {
@@ -160,7 +175,12 @@ const isMainstreamGame = (game: Partial<PostResult>) => {
   const metacritic = Number(game.metacritic ?? 0);
   const ratingCount = Number(game.ratings_count ?? 0);
 
-  if (ratingCount < MAINSTREAM_MIN_RATINGS_COUNT) return false;
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - MAINSTREAM_RECENT_MONTHS);
+  const releaseDate = parseDateString(game.released);
+  const isRecent = releaseDate !== null && releaseDate >= cutoff;
+  const minRatings = isRecent ? MAINSTREAM_RECENT_MIN_RATINGS : MAINSTREAM_ESTABLISHED_MIN_RATINGS;
+  if (ratingCount < minRatings) return false;
   return rating >= MAINSTREAM_MIN_RATING || metacritic >= MAINSTREAM_MIN_METACRITIC;
 };
 
@@ -220,17 +240,8 @@ export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
       console.log(`Checking date range: ${dateRange}`);
 
       for (let page = 1; page <= 20 && remainingSpace > 0; page += 1) {
-        let dateRangeUrl = `${apiPosterUrl}&dates=${dateRange}&ordering=-added&metacritic=${MAINSTREAM_MIN_METACRITIC}..100&page_size=${RANGE_PAGE_SIZE}`;
-        let gameResults = await getGameData(dateRangeUrl, page);
-
-        // If metacritic filter fails, try without it
-        if (!gameResults || gameResults.length === 0) {
-          console.log(
-            `Retrying ${dateRange} page ${page} without metacritic filter`,
-          );
-          dateRangeUrl = `${apiPosterUrl}&dates=${dateRange}&ordering=-added&page_size=${RANGE_PAGE_SIZE}`;
-          gameResults = await getGameData(dateRangeUrl, page);
-        }
+        const dateRangeUrl = `${apiPosterUrl}&dates=${dateRange}&ordering=-added&page_size=${RANGE_PAGE_SIZE}`;
+        const gameResults = await getGameData(dateRangeUrl, page);
 
         if (!gameResults.length) {
           console.log(`No results for ${dateRange} page ${page}`);
