@@ -62,20 +62,20 @@ const Genres: React.FC<GenresProps> = ({ genres }) => {
 
   return (
     <div
-      className="wrapper relative pointer-events-none mt-4 w-full items-center z-10  group text-white flex flex-col "
+      className="wrapper relative pointer-events-none mt-12 items-center z-10 group text-white flex flex-col "
       ref={index}
     >
       <button
-        className={`group-hover:bg-neutral-600 pointer-events-auto rounded-2xl bg-neutral-500 px-[4.4rem] py-3 text-md border-none ${
-          isOpen ? "rounded-b-sm" : "rounded-b-2xl"
+        className={`sort-btn pointer-events-auto rounded-2xl px-[4.4rem] py-3 text-md border-none ${
+          isOpen ? "rounded-b-none" : "rounded-b-2xl"
         }`}
         onClick={toggleDropdown}
       >
         Genres
       </button>
       <div
-        className={`pointer-events-auto top-[3rem] absolute overflow-hidden overflow-y-auto divide-y text-md rounded-b-2xl bg-neutral-100 flex flex-col text-center transition-all duration-300 ${
-          isOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+        className={`pointer-events-auto top-[3rem] absolute rounded-b-2xl overflow-hidden overflow-y-auto divide-y text-md bg-neutral-100 flex flex-col text-center transition-all duration-300 ${
+          isOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0 "
         }`}
         style={{ visibility: isOpen ? "visible" : "hidden" }}
         onClick={closeDropdown}
@@ -83,7 +83,7 @@ const Genres: React.FC<GenresProps> = ({ genres }) => {
         {genres.map((genre) => (
           <Link key={genre.id} href={`/Games/genre/${genre.slug}/page/1`}>
             <ul
-              className="text-black w-[12rem] text-md transition delay-50 p-2 rounded-full hover:scale-105"
+              className="text-black w-[11.5rem] text-md transition delay-50 p-2 rounded-full hover:scale-105"
               onClick={closeDropdown}
             >
               {genre.name}

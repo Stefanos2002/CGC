@@ -8,12 +8,17 @@ import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import { extractRouterConfig } from "uploadthing/server";
 import { ourFileRouter } from "../app/api/uploadthing/core";
 import { Metadata } from "./Constants/constants";
+import { cn } from "@/lib/utils";
+
+// const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+
 const inter = Inter({ subsets: ["latin"] });
 const roboto = Roboto({
   weight: ["400", "700"],
   style: ["normal", "italic"],
   subsets: ["latin"],
   display: "swap",
+  variable: "--font-roboto",
 });
 
 //Metadata of site, all help increasing of SEO
@@ -43,7 +48,10 @@ export default function RootLayout({
 }>) {
   return (
     <SessionWrapper>
-      <html lang="en" className={`${roboto.className}`}>
+      <html
+        lang="en"
+        className={cn(roboto.className, "font-sans", roboto.variable)}
+      >
         <head>
           <title>
             {typeof metadata.title === "string"

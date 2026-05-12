@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { IoMenu } from "react-icons/io5";
 import { FaXbox, FaPlaystation } from "react-icons/fa";
 import { BsNintendoSwitch } from "react-icons/bs";
 import { SiEpicgames } from "react-icons/si";
@@ -9,8 +8,11 @@ import Link from "next/link";
 import Logout from "../Logout";
 import { useSession } from "next-auth/react";
 import defaultAvatar from "@/public/assets/images/default_avatar.jpg";
+import siteLogo from "@/public/assets/images/logo.webp";
 import SearchBar from "./SearchBar";
 import Image from "next/image";
+import GlareHover from "@/components/GlareHover";
+import { TbMenuDeep } from "react-icons/tb";
 
 const logos = [
   { component: <FaXbox />, key: 3, slug: "xbox" },
@@ -117,20 +119,39 @@ const NavBar = () => {
 
   return (
     <nav className="w-full flex justify-between gap-6 items-center sticky top-0 bg-black h-20 z-20">
-      <div className="pl-4 left-side-elements  h-full flex-1 items-center pointer-events-none">
-        <div className="flex gap-9 items-center h-full">
+      <div className="pl-4 left-side-elements  h-full  items-center pointer-events-none">
+        <div className="flex gap-4 items-center h-full">
           <Link
             href="/"
-            className="title text-white text-4xl font-black pointer-events-auto italic font-sans"
+            className="w-18 h-18 pointer-events-auto flex items-center justify-center"
           >
-            CGC
+            <GlareHover
+              glareColor="#ffffff"
+              glareOpacity={0.4}
+              glareAngle={-30}
+              glareSize={300}
+              transitionDuration={800}
+              height="70px"
+              width="70px"
+              borderRadius="100%"
+              background="none"
+              playOnce={false}
+            >
+              <Image
+                src={siteLogo}
+                alt="site_logo"
+                width={64}
+                height={64}
+                className="object-contain rounded-full"
+              />
+            </GlareHover>
           </Link>
-          <Link
+          {/* <Link
             href="/Movies/moviePage/1"
             className="title hover:scale-105 transition-all duration-200 text-cyan-400 text-2xl font-extrabold pointer-events-auto italic font-sans"
           >
             MOVIES
-          </Link>
+          </Link> */}
           {session && (
             <div
               className="relative pointer-events-none z-10 group text-white flex flex-col max-[900px]:hidden"
@@ -180,15 +201,15 @@ const NavBar = () => {
             {!session ? (
               <div className="lg:flex hidden">
                 <Link href={"/Authentication/Signup"}>
-                  <button className="text-white font-black italic uppercase sm:text-xl text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                    SignUp
+                  <button className="text-neutral-900 font-thin tracking-wider border bg-neutral-200 sm:text-lg text-md transition delay-50 p-2 rounded-2xl hover:scale-105">
+                    Register
                   </button>
                 </Link>
-                <Link href={"/Authentication/Signin"}>
+                {/* <Link href={"/Authentication/Signin"}>
                   <button className="text-white font-black italic uppercase sm:text-xl text-lg transition delay-50 p-2 rounded-full hover:scale-110">
                     LogIn
                   </button>
-                </Link>
+                </Link> */}
               </div>
             ) : (
               <div className="hidden"></div>
@@ -198,7 +219,7 @@ const NavBar = () => {
               style={{ transitionProperty: "transform" }}
               className={` items-center transition-all duration-300 ease-in-out flex gap-2 flex-row mt-0`}
             >
-              <div className="lg:flex gap-2 hidden items-center">
+              {/* <div className="lg:flex gap-2 hidden items-center">
                 {logos.map((logo) => (
                   <Link key={logo.key} href={`/Games/${logo.slug}/page/1`}>
                     <div
@@ -214,12 +235,12 @@ const NavBar = () => {
                     All Games
                   </button>
                 </Link>
-              </div>
+              </div> */}
               <button
-                className={`text-white lg:hidden block rounded-full p-2 hover:bg-neutral-800 transition-all duration-200 ease-in-out text-5xl w-16 py-2 px-2 `}
+                className={`text-white block rounded-full hover:bg-neutral-800 transition-all duration-200 ease-in-out font-thin text-4xl p-1.5 `}
                 onClick={toggleMenu}
               >
-                <IoMenu />
+                <TbMenuDeep strokeWidth={1} />
               </button>
 
               <ul
@@ -255,7 +276,7 @@ const NavBar = () => {
                   <div className="hidden"></div>
                 )}
                 <Link href={"/Games/page/1"}>
-                  <button className="font-black italic text-white uppercase text-lg transition delay-50 p-2 rounded-full hover:scale-110">
+                  <button className="font-bold text-white text-lg transition delay-50 p-2 rounded-full hover:scale-105">
                     All Games
                   </button>
                 </Link>

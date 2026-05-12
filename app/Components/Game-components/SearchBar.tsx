@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import { IoStarSharp } from "react-icons/io5";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface PostResult {
   id: number;
@@ -90,6 +91,7 @@ const SearchBar: React.FC<SearchBarProps> = () => {
   const [isLoading, setIsLoading] = useState(false);
   const resultsRef = useRef<HTMLFormElement>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const router = useRouter();
 
   // Debounced search function
   const performSearch = async (query: string) => {
@@ -159,46 +161,46 @@ const SearchBar: React.FC<SearchBarProps> = () => {
     element.style.position = "relative";
   };
 
-  const expandWidth = (element: HTMLElement) => {
-    element.style.position = "absolute";
-    element.style.width = "100vw"; // Example width for when typing
-    element.style.zIndex = "20";
-    element.style.padding = "0 20px 0 15px";
-  };
+  // const expandWidth = (element: HTMLElement) => {
+  //   element.style.position = "absolute";
+  //   element.style.width = "100vw"; // Example width for when typing
+  //   element.style.zIndex = "20";
+  //   element.style.padding = "0 20px 0 15px";
+  // };
 
-  const handleResize = () => {
-    const searchElement = document.querySelector(".search") as HTMLElement;
-    if (!searchElement) return;
+  // const handleResize = () => {
+  //   const searchElement = document.querySelector(".search") as HTMLElement;
+  //   if (!searchElement) return;
 
-    if (window.innerWidth >= 1300) {
-      resetSearchElementStyles(searchElement);
-    } else if (window.innerWidth < 1300) {
-      if (isTyping) {
-        expandWidth(searchElement);
-      } else {
-        resetSearchElementStyles(searchElement);
-      }
-    } else if (inputValue) {
-      expandWidth(searchElement);
-    }
-  };
+  //   if (window.innerWidth >= 1300) {
+  //     resetSearchElementStyles(searchElement);
+  //   } else if (window.innerWidth < 1300) {
+  //     if (isTyping) {
+  //       expandWidth(searchElement);
+  //     } else {
+  //       resetSearchElementStyles(searchElement);
+  //     }
+  //   } else if (inputValue) {
+  //     expandWidth(searchElement);
+  //   }
+  // };
 
-  useEffect(() => {
-    const searchElement = document.querySelector(".search") as HTMLElement;
+  // useEffect(() => {
+  //   const searchElement = document.querySelector(".search") as HTMLElement;
 
-    if (window.innerWidth < 1300) {
-      if (isTyping) {
-        expandWidth(searchElement);
-      } else {
-        resetSearchElementStyles(searchElement);
-      }
-    }
+  //   if (window.innerWidth < 1300) {
+  //     if (isTyping) {
+  //       expandWidth(searchElement);
+  //     } else {
+  //       resetSearchElementStyles(searchElement);
+  //     }
+  //   }
 
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [inputValue, isTyping]);
+  //   window.addEventListener("resize", handleResize);
+  //   return () => {
+  //     window.removeEventListener("resize", handleResize);
+  //   };
+  // }, [inputValue, isTyping]);
 
   //check if clicked outside of input container
   useEffect(() => {
@@ -221,26 +223,25 @@ const SearchBar: React.FC<SearchBarProps> = () => {
   // keys and enter functionality when rendering results
   useEffect(() => {
     let selectedIndex = -1;
-    const spans = document.querySelectorAll(".search-result");
+
     const handleKey = (e: KeyboardEvent) => {
+      const links = document.querySelectorAll(".container");
       if (e.key === "ArrowDown" && selectedIndex < search.length - 1) {
         selectedIndex++;
-        //adding color for each selection
-        spans.forEach((span, index) => {
+        links.forEach((item, index) => {
           if (index === selectedIndex) {
-            span.classList.add("text-stone-400");
+            item.classList.add("scale-[1.03]", "text-stone-400");
           } else {
-            span.classList.remove("text-stone-400");
+            item.classList.remove("scale-[1.03]", "text-stone-400");
           }
         });
       } else if (e.key === "ArrowUp" && selectedIndex > 0) {
         selectedIndex--;
-        //adding color for each selection
-        spans.forEach((span, index) => {
+        links.forEach((item, index) => {
           if (index === selectedIndex) {
-            span.classList.add("text-stone-400");
+            item.classList.add("scale-[1.03]", "text-stone-400");
           } else {
-            span.classList.remove("text-stone-400");
+            item.classList.remove("scale-[1.03]", "text-stone-400");
           }
         });
       } else if (e.key === "Enter" && selectedIndex >= 0) {
@@ -281,12 +282,17 @@ const SearchBar: React.FC<SearchBarProps> = () => {
     e.preventDefault();
     if (selectedIndex >= 0 && search[selectedIndex]) {
       window.location.href = `/Games/${search[selectedIndex].slug}`;
+    } else if (inputValue.trim()) {
+      router.push(
+        `/Games/page/1?search=${encodeURIComponent(inputValue.trim())}`,
+      );
+      setVisible(false);
     }
   };
 
   return (
     <form
-      className="search relative w-full"
+      className="search relative w-[32rem] max-w-lg"
       ref={resultsRef}
       onSubmit={handleSubmit}
     >
@@ -294,7 +300,7 @@ const SearchBar: React.FC<SearchBarProps> = () => {
         <input
           type="search"
           placeholder="Type Here"
-          className="subpixel-antialiased h-12 w-full outline-none rounded-full bg-slate-200 pl-10 pr-11 text-slate-600"
+          className="subpixel-antialiased text-[16px] h-12 w-full outline-none rounded-full bg-slate-200 pl-10 pr-11 text-slate-600"
           onChange={handleInputChange}
           value={inputValue}
         />
@@ -318,7 +324,7 @@ const SearchBar: React.FC<SearchBarProps> = () => {
             <Link
               key={index}
               href={`/Games/${result.slug}`}
-              className="flex flex-row transition-all duration-300 ease-in-out hover:scale-[1.02] pl-6 hover:text-stone-400"
+              className="flex container flex-row transition-all duration-300 ease-in-out hover:scale-[1.03] pl-6 hover:text-stone-400"
             >
               <div className="relative overflow-hidden sm:w-44 sm:h-32 min-[420px]:w-40 min-[420px]:h-28 w-36 h-24 flex-shrink-0 flex-grow-0">
                 {result.background_image && (

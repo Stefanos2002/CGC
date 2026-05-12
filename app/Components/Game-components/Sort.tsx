@@ -51,19 +51,19 @@ const Sort = () => {
 
   return (
     <div
-      className="pointer-events-none group mt-12 text-white relative flex flex-col items-center justify-center"
+      className="pointer-events-none z-10 group mt-12 text-white relative flex flex-col items-center"
       ref={index}
     >
       <button
-        className={`group-hover:bg-blue-900 pointer-events-auto rounded-2xl bg-blue-950 px-10 py-3 text-md border-none ${
-          isOpen ? "rounded-b-sm" : "rounded-b-2xl"
+        className={`sort-btn pointer-events-auto rounded-2xl px-10 py-3 text-md border-none ${
+          isOpen ? "rounded-b-none" : "rounded-b-2xl"
         }`}
         onClick={toggleDropdown}
       >
         Order By
       </button>
       <div
-        className={`pointer-events-auto w-[9.7rem] divide-y text-md rounded-b-2xl bg-neutral-100 text-black flex flex-col transition-all duration-300 ${
+        className={`pointer-events-auto absolute top-[3rem] overflow-hidden w-[9rem] divide-y text-md rounded-b-2xl bg-neutral-100 text-black flex flex-col transition-all duration-300 ${
           isOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
         }`}
         style={{ visibility: isOpen ? "visible" : "hidden" }}
