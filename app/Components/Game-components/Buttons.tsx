@@ -6,6 +6,9 @@ interface ButtonsProps {
   link: string;
   page: number;
   searchQuery?: string;
+  consoleName?: string;
+  genre?: string;
+  sort?: string;
 }
 
 const Buttons = async ({
@@ -13,16 +16,16 @@ const Buttons = async ({
   link,
   page,
   searchQuery,
+  consoleName,
+  genre,
+  sort,
 }: ButtonsProps) => {
   const totalPages = Math.ceil(gamesLength / pageSize);
-  let buttons = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const buttons = Array.from({ length: totalPages }, (_, i) => i + 1);
 
-  // Determine the range of page buttons to display
   const getPageRange = () => {
     const totalButtonsToShow = 5;
-    if (totalPages <= totalButtonsToShow) {
-      return buttons;
-    }
+    if (totalPages <= totalButtonsToShow) return buttons;
     const start = Math.max(1, page - Math.floor(totalButtonsToShow / 2));
     const end = Math.min(totalPages, start + totalButtonsToShow - 1);
     return buttons.slice(start - 1, end);
@@ -31,15 +34,17 @@ const Buttons = async ({
   const pageRange = getPageRange();
 
   const buildUrl = (pageNum: number) => {
-    const url = `${link}/${pageNum}`;
-    return searchQuery
-      ? `${url}?search=${encodeURIComponent(searchQuery)}`
-      : url;
+    const params = new URLSearchParams();
+    if (consoleName) params.set("console", consoleName);
+    if (genre) params.set("genre", genre);
+    if (sort) params.set("sort", sort);
+    if (searchQuery) params.set("search", searchQuery);
+    const query = params.toString();
+    return query ? `${link}/${pageNum}?${query}` : `${link}/${pageNum}`;
   };
 
   return (
     <div className="relative text-white my-5 mb-10 flex flex-row items-center justify-center gap-4 max-[450px]:gap-2 transition-all duration-200">
-      {/* First page button */}
       {page > 3 && (
         <Link href={buildUrl(1)}>
           <button className="hover:scale-110 transition-all duration-200 border-2 px-2 py-[0.2rem] rounded-md bg-stone-600 border-stone-600">
@@ -47,8 +52,6 @@ const Buttons = async ({
           </button>
         </Link>
       )}
-
-      {/* Previous page button */}
       {page > 1 && (
         <Link href={buildUrl(Math.max(page - 1, 1))}>
           <button className="hover:scale-110 transition-all duration-200 border-2 px-2 py-[0.2rem] rounded-md bg-stone-600 border-stone-600">
@@ -56,8 +59,6 @@ const Buttons = async ({
           </button>
         </Link>
       )}
-
-      {/* Page number buttons */}
       {pageRange.map((item) => (
         <Link
           href={buildUrl(item)}
@@ -69,8 +70,6 @@ const Buttons = async ({
           {item}
         </Link>
       ))}
-
-      {/* Next page button */}
       {page < totalPages && (
         <Link href={buildUrl(Math.min(page + 1, totalPages))}>
           <button className="hover:scale-110 transition-all duration-200 border-2 px-2 py-[0.2rem] rounded-md bg-stone-600 border-stone-600">
@@ -78,8 +77,6 @@ const Buttons = async ({
           </button>
         </Link>
       )}
-
-      {/* Last page button */}
       {page < totalPages - 2 && (
         <Link href={buildUrl(totalPages)}>
           <button className="hover:scale-110 transition-all duration-200 border-2 px-2 py-[0.2rem] rounded-md bg-stone-600 border-stone-600">

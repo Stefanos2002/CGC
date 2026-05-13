@@ -5,11 +5,8 @@ import Screenshots from "./Screenshots";
 import { getServerSession } from "next-auth";
 import { findUserByEmail } from "@/app/User Collection/connection";
 import { authOptions } from "@/authDbConnection/authOptions";
-import {
-  convertToStars,
-  roundNum,
-  getGameInfoByName,
-} from "@/app/Game Collection/functions";
+import { getGameInfoByName } from "@/app/Game Collection/functions";
+import { BsController } from "react-icons/bs";
 import Image from "next/image";
 
 const GameDets = async ({ params }: { params: any }) => {
@@ -23,7 +20,7 @@ const GameDets = async ({ params }: { params: any }) => {
     dbUser = await findUserByEmail(userEmail);
   }
   return (
-    <div className="flex pt-20 items-center lg:items-stretch flex-col lg:flex-row h-full justify-evenly xl:gap-20 gap-10 pl-0">
+    <div className="flex pt-20 items-center lg:items-stretch flex-col lg:flex-row h-full justify-evenly gap-10 pl-0">
       <div className="flex lg:w-[50vw] h-full w-[85vw] flex-col relative lg:pl-10 pl-0">
         <div className="relative w-full aspect-[16/9]">
           <Image
@@ -44,13 +41,24 @@ const GameDets = async ({ params }: { params: any }) => {
                 {game.name}
               </span>
             </div>
-            <div className="flex flex-row gap-4 items-stretch justify-between">
+            <div className="flex flex-row gap-4 items-center justify-between">
               <span className="lg:text-md min-[450px]:text-lg text-md font-bold">
                 Rating:
               </span>
               {game.rating > 0 ? (
-                <span className="flex gap-[1px] text-white lg:text-md min-[450px]:text-lg text-md">
-                  {convertToStars(game.rating)}({roundNum(game.ratings_count)})
+                <span
+                  className="flex gap-2 items-center lg:text-md min-[450px]:text-lg text-md font-semibold"
+                  style={{
+                    color:
+                      Math.round(game.rating * 20) >= 80
+                        ? "#4ade80"
+                        : Math.round(game.rating * 20) >= 50
+                          ? "#c084fc"
+                          : "#f87171",
+                  }}
+                >
+                  <BsController style={{ fontSize: "22px" }} />
+                  {Math.round(game.rating * 20)}/100
                 </span>
               ) : (
                 <span>---</span>
@@ -95,14 +103,14 @@ const GameDets = async ({ params }: { params: any }) => {
                   game.platforms.map(
                     (
                       platform: { platform: { name: string } },
-                      index: number
+                      index: number,
                     ) => (
                       <span key={index}>
                         {index > 0 && ","}{" "}
                         {/* Add slash if not the first platform */}
                         {platform.platform.name}
                       </span>
-                    )
+                    ),
                   )
                 ) : (
                   <span>---</span>

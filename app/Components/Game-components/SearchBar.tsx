@@ -2,84 +2,52 @@
 import { AiOutlineSearch } from "react-icons/ai";
 import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
-import { IoStarSharp } from "react-icons/io5";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import {
+  FaWindows,
+  FaPlaystation,
+  FaXbox,
+  FaApple,
+  FaLinux,
+  FaAndroid,
+} from "react-icons/fa";
+import { SiNintendoswitch } from "react-icons/si";
+
+interface Platform {
+  platform: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+}
 
 interface PostResult {
   id: number;
   slug: string;
   name: string;
   released: string;
-  tba: boolean;
   background_image: string;
-  rating: number;
-  rating_top: number;
-  description: string;
+  parent_platforms: Platform[];
 }
 
 interface SearchBarProps {
   // No props needed anymore
 }
 
-const convertToStars = (rating: number) => {
-  const stars: JSX.Element[] = [];
-  const whole = Math.floor(rating);
-  const remainder = rating - whole;
-  const percentage_r = `${remainder * 100}%`;
-
-  // Define colors based on rating range
-  const getColor = (rating: number) => {
-    if (rating < 3) return "darkorange";
-    if (rating < 4) return "#C4B454";
-    return "darkgreen";
-  };
-
-  const color = getColor(rating);
-
-  // Add full stars
-  for (let i = 0; i < whole; i++) {
-    stars.push(
-      <IoStarSharp
-        key={i}
-        style={{
-          background: color,
-          fontSize: "24px",
-          padding: "2px",
-        }}
-      />,
-    );
+const platformIcon = (slug: string, id: number) => {
+  const iconProps = { size: 16, className: "text-slate-300", key: id };
+  switch (slug) {
+    case "pc":          return <FaWindows {...iconProps} />;
+    case "playstation": return <FaPlaystation {...iconProps} />;
+    case "xbox":        return <FaXbox {...iconProps} />;
+    case "nintendo":    return <SiNintendoswitch {...iconProps} />;
+    case "mac":         return <FaApple {...iconProps} />;
+    case "linux":       return <FaLinux {...iconProps} />;
+    case "android":     return <FaAndroid {...iconProps} />;
+    case "ios":         return <FaApple {...iconProps} />;
+    default:            return null;
   }
-
-  // Add partial star if there's a remainder
-  if (remainder > 0) {
-    stars.push(
-      <IoStarSharp
-        key="partial"
-        style={{
-          background: `linear-gradient(to right, ${color} ${percentage_r}, grey ${percentage_r})`,
-          fontSize: "24px",
-          padding: "2px",
-        }}
-      />,
-    );
-  }
-
-  // Add empty stars to complete 5
-  while (stars.length < 5) {
-    stars.push(
-      <IoStarSharp
-        key={stars.length}
-        style={{
-          background: "grey",
-          fontSize: "24px",
-          padding: "2px",
-        }}
-      />,
-    );
-  }
-
-  return stars;
 };
 
 const SearchBar: React.FC<SearchBarProps> = () => {
@@ -343,11 +311,13 @@ const SearchBar: React.FC<SearchBarProps> = () => {
                 >
                   {result.name}
                 </div>
-                <div className="pt-3 flex flex-row items-center italic cursor-pointer text-black font-black text-[16px] pl-6 pr-4">
-                  <span className="flex gap-[0.9px] text-white rounded-md p-1">
-                    {convertToStars(result.rating)}
-                  </span>
-                </div>
+                {result.parent_platforms?.length > 0 && (
+                  <div className="pt-2 flex flex-row gap-2 flex-wrap pl-6 pr-4">
+                    {result.parent_platforms.map(({ platform }) =>
+                      platformIcon(platform.slug, platform.id),
+                    )}
+                  </div>
+                )}
                 <div className="py-2 cursor-pointer text-[15px] pl-6 pr-4">
                   Release Date: {result.released}
                 </div>

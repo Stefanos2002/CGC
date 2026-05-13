@@ -146,12 +146,6 @@ const NavBar = () => {
               />
             </GlareHover>
           </Link>
-          {/* <Link
-            href="/Movies/moviePage/1"
-            className="title hover:scale-105 transition-all duration-200 text-cyan-400 text-2xl font-extrabold pointer-events-auto italic font-sans"
-          >
-            MOVIES
-          </Link> */}
           {session && (
             <div
               className="relative pointer-events-none z-10 group text-white flex flex-col max-[900px]:hidden"
@@ -172,7 +166,6 @@ const NavBar = () => {
                 <IoIosArrowDown className="text-white text-2xl" />
               </div>
               <div
-                ref={profileRef}
                 className={`pointer-events-auto absolute flex flex-col overflow-hidden -left-6 top-14 w-24 bg-white rounded-md shadow-lg transition-all duration-200 ${
                   showProfile ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                 }`}
@@ -198,44 +191,20 @@ const NavBar = () => {
       {isWideScreen !== undefined &&
         (isWideScreen ? (
           <div className="right-side-elements flex items-center gap-3 pr-6 relative h-full">
-            {!session ? (
+            {!session && (
               <div className="lg:flex hidden">
                 <Link href={"/Authentication/Signup"}>
                   <button className="text-neutral-900 font-thin tracking-wider border bg-neutral-200 sm:text-lg text-md transition delay-50 p-2 rounded-2xl hover:scale-105">
                     Register
                   </button>
                 </Link>
-                {/* <Link href={"/Authentication/Signin"}>
-                  <button className="text-white font-black italic uppercase sm:text-xl text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                    LogIn
-                  </button>
-                </Link> */}
               </div>
-            ) : (
-              <div className="hidden"></div>
             )}
             <div
               ref={menuRef}
               style={{ transitionProperty: "transform" }}
               className={` items-center transition-all duration-300 ease-in-out flex gap-2 flex-row mt-0`}
             >
-              {/* <div className="lg:flex gap-2 hidden items-center">
-                {logos.map((logo) => (
-                  <Link key={logo.key} href={`/Games/${logo.slug}/page/1`}>
-                    <div
-                      className="text-stone-200 sm:text-3xl text-2xl transition delay-50 p-2 rounded-full hover:scale-110"
-                      onClick={closeDropdown}
-                    >
-                      {logo.component}
-                    </div>
-                  </Link>
-                ))}
-                <Link href={"/Games/page/1"}>
-                  <button className="font-black italic text-white uppercase sm:text-lg text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                    All Games
-                  </button>
-                </Link>
-              </div> */}
               <button
                 className={`text-white block rounded-full hover:bg-neutral-800 transition-all duration-200 ease-in-out font-thin text-4xl p-1.5 `}
                 onClick={toggleMenu}
@@ -250,7 +219,10 @@ const NavBar = () => {
                 }  bg-black w-28 py-3 absolute z-30 right-0 top-16 transition-all duration-300 ease-in-out overflow-hidden rounded-b-lg gap-5 flex items-center justify-center flex-col`}
               >
                 {logos.map((logo) => (
-                  <Link key={logo.key} href={`/Games/${logo.slug}/page/1`}>
+                  <Link
+                    key={logo.key}
+                    href={`/Games/page/1?console=${logo.slug}`}
+                  >
                     <div
                       className="text-stone-200 sm:text-3xl text-2xl transition delay-50 p-2 rounded-full hover:scale-110"
                       onClick={closeDropdown}
@@ -259,7 +231,7 @@ const NavBar = () => {
                     </div>
                   </Link>
                 ))}
-                {!session ? (
+                {!session && (
                   <div className="lg:hidden flex flex-col items-center justify-center gap-5">
                     <Link href={"/Authentication/Signup"}>
                       <button className="uppercase italic text-white font-black sm:text-xl text-lg transition delay-50 p-2 rounded-full hover:scale-110">
@@ -272,11 +244,12 @@ const NavBar = () => {
                       </button>
                     </Link>
                   </div>
-                ) : (
-                  <div className="hidden"></div>
                 )}
                 <Link href={"/Games/page/1"}>
-                  <button className="font-bold text-white text-lg transition delay-50 p-2 rounded-full hover:scale-105">
+                  <button
+                    className="font-bold text-white text-lg transition delay-50 p-2 rounded-full hover:scale-105"
+                    onClick={closeDropdown}
+                  >
                     All Games
                   </button>
                 </Link>
@@ -314,7 +287,10 @@ const NavBar = () => {
               } overflow-hidden`}
             >
               {logos.map((logo) => (
-                <Link key={logo.key} href={`/Games/${logo.slug}/page/1`}>
+                <Link
+                  key={logo.key}
+                  href={`/Games/page/1?console=${logo.slug}`}
+                >
                   <div
                     className="text-stone-200 text-3xl transition delay-50 p-2 rounded-full hover:scale-110"
                     onClick={closeDropdown}
@@ -323,7 +299,7 @@ const NavBar = () => {
                   </div>
                 </Link>
               ))}
-              {!session ? (
+              {!session && (
                 <div className="flex gap-5">
                   <Link href={"/Authentication/Signup"}>
                     <button className="text-white uppercase italic font-black text-md transition delay-50 rounded-full hover:scale-110">
@@ -336,8 +312,6 @@ const NavBar = () => {
                     </button>
                   </Link>
                 </div>
-              ) : (
-                <div className="hidden"></div>
               )}
               <Link href={"/Games/page/1"}>
                 <button className="text-white uppercase italic font-black text-md transition delay-50  rounded-full hover:scale-110">

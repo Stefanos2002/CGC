@@ -59,8 +59,8 @@ export async function GET(req: NextRequest) {
         slug: 1,
         name: 1,
         background_image: 1,
-        rating: 1,
         released: 1,
+        parent_platforms: 1,
       })
       .limit(4)
       .toArray();
