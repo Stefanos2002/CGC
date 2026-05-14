@@ -9,20 +9,27 @@ const EDITION_KEYWORDS_PATTERN = [
   "gold edition", "expanded edition", "extended edition", "redux",
 ].join("|");
 
-// Builds a regex that tolerates apostrophes, colons, hyphens in game names.
-// "assassins" will match "Assassin's Creed"; "horizon zero dawn" matches "Horizon: Zero Dawn".
+// Builds a flexible regex tolerating apostrophes, colons, hyphens, compound words.
+// "spiderman" → matches "Spider-Man"; "assassins creed" → "Assassin's Creed";
+// "spider-man" → splits into ["spider","man"] joined by separator pattern.
 function buildFlexibleRegex(query: string): string {
-  // Strip apostrophes/colons/etc from the query itself
-  const normalized = query.replace(/[^\w\s]/g, "").trim();
+  // Replace special chars with spaces so "spider-man" becomes ["spider","man"]
+  // and "assassin's" becomes ["assassins"] etc.
+  const normalized = query
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   const words = normalized.split(/\s+/).filter(Boolean);
 
   const wordPatterns = words.map((word) => {
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return escaped.split("").join("[^a-zA-Z0-9]{0,2}");
+    // Allow common word-separator chars between each letter so that
+    // "spiderman" matches "Spider-Man", "ironman" matches "Iron Man", etc.
+    return escaped.split("").join("[\\s\\-'.:]*");
   });
 
-  // Between words, allow any combination of spaces, colons, commas, hyphens
-  return wordPatterns.join("[\\s:,\\-]*");
+  // Between words allow any combination of separators + articles
+  return wordPatterns.join("[\\s:,\\-.']*");
 }
 
 export async function GET(req: NextRequest) {

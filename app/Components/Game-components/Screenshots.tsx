@@ -8,7 +8,7 @@ const Screenshots = async ({ params }: { params: any }) => {
     <div className="flex w-full flex-col items-center gap-4 px-6 pb-16 pt-4">
       <span className="font-bold text-white text-2xl">Screenshots</span>
       {screenshots && screenshots.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 w-full max-w-6xl">
+        <div className="grid grid-cols-1 min-[500px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 w-full max-w-6xl">
           {screenshots.map((item: any) => (
             <div key={item.id} className="relative w-full aspect-video">
               <Image
@@ -21,7 +21,9 @@ const Screenshots = async ({ params }: { params: any }) => {
           ))}
         </div>
       ) : (
-        <span className="text-xl text-white text-center">No screenshots available.</span>
+        <span className="text-xl text-white text-center">
+          No screenshots available.
+        </span>
       )}
     </div>
   );

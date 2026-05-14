@@ -143,6 +143,7 @@ const isGameReleasedAndInRange = (game: Partial<PostResult>) => {
 };
 
 const isMainstreamGame = (game: Partial<PostResult>) => {
+  if (!game.description_raw) return false;
   if (!isGameReleasedAndInRange(game)) return false;
   if (isEditionVariant(game)) return false;
   if (isAdultGame(game)) return false;
@@ -697,13 +698,16 @@ export const searchGamesByName = async (
   query: string,
 ): Promise<PostResult[]> => {
   const gameCollection = await getGamesCollection();
-  const normalized = query.replace(/[^\w\s]/g, "").trim();
+  const normalized = query
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   const words = normalized.split(/\s+/).filter(Boolean);
   const wordPatterns = words.map((word) => {
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return escaped.split("").join("[^a-zA-Z0-9]{0,2}");
+    return escaped.split("").join("[\\s\\-'.:]*");
   });
-  const flexibleRegex = wordPatterns.join("[\\s:,\\-]*");
+  const flexibleRegex = wordPatterns.join("[\\s:,\\-.']*");
   const docs = (await gameCollection
     .find<PostResult>({
       name: { $regex: flexibleRegex, $options: "i" },

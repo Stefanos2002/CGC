@@ -9,6 +9,17 @@ import { getGameInfoByName } from "@/app/Game Collection/functions";
 import { BsController } from "react-icons/bs";
 import Image from "next/image";
 
+const cleanDescription = (text: string): string =>
+  text
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/_(.*?)_/g, "$1")
+    .replace(/[⌀-➿⬀-⯿\uD800-\uDFFF]/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
 const GameDets = async ({ params }: { params: any }) => {
   const game = await getGameInfoByName(params.name);
   const session = await getServerSession(authOptions);
@@ -21,8 +32,8 @@ const GameDets = async ({ params }: { params: any }) => {
   }
   return (
     <div className="flex w-full flex-col">
-      <div className="flex pt-20 items-stretch flex-col lg:flex-row h-full gap-5 px-6">
-        <div className="flex w-[50vw] h-full flex-col relative">
+      <div className="flex pt-20 items-stretch max-[923px]:flex-col h-full gap-5 px-6">
+        <div className="flex w-[50vw] max-[923px]:w-full h-full flex-col relative">
           <div className="relative w-full aspect-[16/9]">
             <Image
               src={game.background_image}
@@ -157,12 +168,12 @@ const GameDets = async ({ params }: { params: any }) => {
         </div>
 
         {game.description_raw ? (
-          <div className="mb-10 flex flex-col gap-3 border shadow-xl shadow-gray-600 relative w-[50vw] overflow-y-auto bg-neutral-900 p-6 rounded-2xl transition-[width] ease-in-out duration-300">
+          <div className="mb-10 flex flex-col gap-3 border shadow-xl shadow-gray-600 relative w-[50vw] max-[923px]:w-full overflow-y-auto bg-neutral-900 p-6 rounded-2xl transition-[width] ease-in-out duration-300">
             <h2 className="text-white text-xl font-semibold border-b border-neutral-700 pb-2 tracking-wide">
               About
             </h2>
             <p className="leading-[1.8rem] text-neutral-300 text-md tracking">
-              {game.description_raw}
+              {cleanDescription(game.description_raw)}
             </p>
           </div>
         ) : (

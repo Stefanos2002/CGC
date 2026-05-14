@@ -4,6 +4,7 @@ import { FaXbox, FaPlaystation } from "react-icons/fa";
 import { BsNintendoSwitch } from "react-icons/bs";
 import { SiEpicgames } from "react-icons/si";
 import { IoIosArrowDown } from "react-icons/io";
+import { AiOutlineSearch, AiOutlineClose } from "react-icons/ai";
 import Link from "next/link";
 import Logout from "../Logout";
 import { useSession } from "next-auth/react";
@@ -24,30 +25,12 @@ const logos = [
 const NavBar = () => {
   const [user, setUser] = useState<any>(null);
   const [showmenu, setShowMenu] = useState(false);
-  const [openMenu, setisOpenMenu] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const { data: session, status } = useSession();
+  const [showSearch, setShowSearch] = useState(false);
+  const { data: session } = useSession();
   const profileRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [isWideScreen, setIsWideScreen] = useState<boolean | undefined>(
-    undefined,
-  );
 
-  // Handle window resize
-  useEffect(() => {
-    // Set initial `isWideScreen` value based on the window width after mount
-    setIsWideScreen(window.innerWidth > 640);
-
-    // Handle window resize to update `isWideScreen` on resize events
-    const handleResize = () => {
-      setIsWideScreen(window.innerWidth > 640);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  //check if clicked outside of input container
   useEffect(() => {
     const mouseHandler = (e: MouseEvent) => {
       if (
@@ -63,276 +46,177 @@ const NavBar = () => {
       }
     };
     document.addEventListener("mousedown", mouseHandler);
-    return () => {
-      document.removeEventListener("mousedown", mouseHandler);
-    };
+    return () => document.removeEventListener("mousedown", mouseHandler);
   }, []);
 
-  const toggleMenu = () => {
-    setShowMenu(!showmenu);
-  };
-  const toggleMenu2 = () => {
-    setisOpenMenu(!openMenu);
-  };
-  const closeDropdown = () => {
-    setShowMenu(false);
-  };
-  const toggleProfile = () => {
-    setShowProfile(!showProfile);
-  };
-  const closeProfile = () => {
-    setShowProfile(false);
-  };
-
-  // // Fetch the user's details from the database on component mount
   useEffect(() => {
     const fetchProfileDetails = async () => {
-      if (session?.user?.email) {
-        try {
-          // Fetch response using the email as a query param
-          const response = await fetch(
-            `/api/getUserDetails/${session.user.email}`,
-          );
-
-          if (!response.ok) {
-            console.error("Error fetching user details:", response.statusText);
-            return;
-          }
-
-          // Parse the response as JSON
-          const data = await response.json();
-
-          // Check if the data contains a valid id
-          if (data?._id) {
-            setUser(data);
-          } else {
-            console.log("No profile found for this user.");
-          }
-        } catch (error) {
-          console.error("Failed to fetch profile details:", error);
-        }
+      if (!session?.user?.email) return;
+      try {
+        const response = await fetch(`/api/getUserDetails/${session.user.email}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?._id) setUser(data);
+      } catch (error) {
+        console.error("Failed to fetch profile details:", error);
       }
     };
-
     fetchProfileDetails();
-  }, [session?.user?.email]); // Only re-run this effect if the session changes\
+  }, [session?.user?.email]);
+
+  const toggleMenu = () => setShowMenu((p) => !p);
+  const closeDropdown = () => setShowMenu(false);
+  const toggleProfile = () => setShowProfile((p) => !p);
+  const closeProfile = () => setShowProfile(false);
 
   return (
-    <nav className="w-full flex justify-between gap-6 items-center sticky top-0 bg-black h-20 z-20">
-      <div className="pl-4 left-side-elements  h-full  items-center pointer-events-none">
-        <div className="flex gap-4 items-center h-full">
-          <Link
-            href="/"
-            className="w-18 h-18 pointer-events-auto flex items-center justify-center"
+    <nav className="w-full flex justify-between items-center sticky top-0 bg-black h-20 z-20">
+      {/* Left: logo + avatar */}
+      <div className="pl-4 flex items-center h-full gap-4 shrink-0 pointer-events-none">
+        <Link href="/" className="pointer-events-auto flex items-center justify-center">
+          <GlareHover
+            glareColor="#ffffff"
+            glareOpacity={0.4}
+            glareAngle={-30}
+            glareSize={300}
+            transitionDuration={800}
+            height="60px"
+            width="60px"
+            borderRadius="100%"
+            background="none"
+            playOnce={false}
           >
-            <GlareHover
-              glareColor="#ffffff"
-              glareOpacity={0.4}
-              glareAngle={-30}
-              glareSize={300}
-              transitionDuration={800}
-              height="70px"
-              width="70px"
-              borderRadius="100%"
-              background="none"
-              playOnce={false}
+            <Image
+              src={siteLogo}
+              alt="site_logo"
+              width={56}
+              height={56}
+              className="object-contain rounded-full"
+            />
+          </GlareHover>
+        </Link>
+        {session && (
+          <div
+            className="relative pointer-events-none z-10 text-white max-[900px]:hidden"
+            ref={profileRef}
+          >
+            <div
+              className="pointer-events-auto flex flex-row items-center gap-1 cursor-pointer hover:brightness-75"
+              onClick={toggleProfile}
             >
               <Image
-                src={siteLogo}
-                alt="site_logo"
-                width={64}
-                height={64}
-                className="object-contain rounded-full"
+                src={user?.profilePicture || defaultAvatar.src}
+                alt="image"
+                width={50}
+                height={50}
+                priority
+                className="rounded-full object-cover"
               />
-            </GlareHover>
-          </Link>
-          {session && (
-            <div
-              className="relative pointer-events-none z-10 group text-white flex flex-col max-[900px]:hidden"
-              ref={profileRef}
-            >
-              <div
-                className="pointer-events-auto flex flex-row items-center justify-center gap-1 hover:cursor-pointer hover:brightness-75 w-auto h-auto"
-                onClick={toggleProfile}
-              >
-                <Image
-                  src={user?.profilePicture || defaultAvatar.src}
-                  alt="image"
-                  width={50}
-                  height={50}
-                  priority
-                  className="rounded-full max-w-max object-cover"
-                />
-                <IoIosArrowDown className="text-white text-2xl" />
-              </div>
-              <div
-                className={`pointer-events-auto absolute flex flex-col overflow-hidden -left-6 top-14 w-24 bg-white rounded-md shadow-lg transition-all duration-200 ${
-                  showProfile ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-                }`}
-                style={{ transitionProperty: "max-height, opacity" }}
-                onClick={closeProfile}
-              >
-                <ul className="py-2 divide-y text-black">
-                  <Link href={`/Account/info`}>
-                    <li className="px-4 py-3 hover:bg-gray-100 cursor-pointer">
-                      Profile
-                    </li>
-                  </Link>
-                  <li className="px-3 text-md py-4 hover:bg-gray-100 cursor-pointer">
-                    <Logout />
-                  </li>
-                </ul>
-              </div>
+              <IoIosArrowDown className="text-white text-2xl" />
             </div>
-          )}
-        </div>
-      </div>
-      <SearchBar />
-      {isWideScreen !== undefined &&
-        (isWideScreen ? (
-          <div className="right-side-elements flex items-center gap-3 pr-6 relative h-full">
-            {!session && (
-              <div className="lg:flex hidden">
-                <Link href={"/Authentication/Signup"}>
-                  <button className="text-neutral-900 tracking-wide border bg-neutral-200 sm:text-lg text-md transition delay-50 p-2 rounded-2xl hover:scale-105">
-                    Register
-                  </button>
-                </Link>
-              </div>
-            )}
             <div
-              ref={menuRef}
-              style={{ transitionProperty: "transform" }}
-              className={` items-center transition-all duration-300 ease-in-out flex gap-2 flex-row mt-0`}
+              className={`pointer-events-auto absolute flex flex-col overflow-hidden -left-6 top-14 w-24 bg-white rounded-md shadow-lg transition-all duration-200 ${
+                showProfile ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+              }`}
+              style={{ transitionProperty: "max-height, opacity" }}
+              onClick={closeProfile}
             >
-              <button
-                className={`text-white block rounded-full hover:bg-neutral-800 transition-all duration-200 ease-in-out font-thin text-4xl p-1.5 `}
-                onClick={toggleMenu}
-              >
-                <TbMenuDeep strokeWidth={1} />
-              </button>
-
-              <ul
-                style={{ transitionProperty: "max-height, opacity, transform" }}
-                className={`${
-                  showmenu ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
-                }  bg-black w-28 py-3 absolute z-30 right-0 top-16 transition-all duration-300 ease-in-out overflow-hidden rounded-b-lg gap-5 flex items-center justify-center flex-col`}
-              >
-                {logos.map((logo) => (
-                  <Link
-                    key={logo.key}
-                    href={`/Games/page/1?console=${logo.slug}`}
-                  >
-                    <div
-                      className="text-stone-200 sm:text-3xl text-2xl transition delay-50 p-2 rounded-full hover:scale-110"
-                      onClick={closeDropdown}
-                    >
-                      {logo.component}
-                    </div>
-                  </Link>
-                ))}
-                {!session && (
-                  <div className="lg:hidden flex flex-col items-center justify-center gap-5">
-                    <Link href={"/Authentication/Signup"}>
-                      <button className="uppercase italic text-white font-black sm:text-xl text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                        Sign Up
-                      </button>
-                    </Link>
-                    <Link href={"/Authentication/Signin"}>
-                      <button className="uppercase italic text-white font-black sm:text-xl text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                        Log In
-                      </button>
-                    </Link>
-                  </div>
-                )}
-                <Link href={"/Games/page/1"}>
-                  <button
-                    className="font-bold text-white text-lg transition delay-50 p-2 rounded-full hover:scale-105"
-                    onClick={closeDropdown}
-                  >
-                    All Games
-                  </button>
+              <ul className="py-2 divide-y text-black">
+                <Link href="/Account/info">
+                  <li className="px-4 py-3 hover:bg-gray-100 cursor-pointer">Profile</li>
                 </Link>
-                {session && (
-                  <div className="min-[900px]:hidden flex flex-col items-center gap-5">
-                    <Link href={`/Account/info`}>
-                      <button className="text-cyan-400 uppercase italic font-black text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                        My Profile
-                      </button>
-                    </Link>
-                    <div className="text-stone-200 text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                      <Logout />
-                    </div>
-                  </div>
-                )}
+                <li className="px-3 text-md py-4 hover:bg-gray-100 cursor-pointer">
+                  <Logout />
+                </li>
               </ul>
             </div>
           </div>
-        ) : (
-          <div
-            className={`menu flex flex-col drop-shadow-lg w-full absolute top-16 items-center  `}
-          >
-            <button
-              onClick={toggleMenu2}
-              className="text-black font-black uppercase order-2 bg-white w-full py-2 text-lg"
-            >
-              Menu
+        )}
+      </div>
+
+      {/* Center: search bar — hidden below md (768px) */}
+      <div className="hidden md:flex flex-1 justify-center px-4">
+        <SearchBar />
+      </div>
+
+      {/* Right: search icon (mobile only), register, hamburger */}
+      <div className="flex items-center gap-2 pr-4 shrink-0" ref={menuRef}>
+        <button
+          className="md:hidden text-white text-2xl p-2 rounded-full hover:bg-neutral-800 transition-all duration-200"
+          onClick={() => setShowSearch(true)}
+          aria-label="Open search"
+        >
+          <AiOutlineSearch />
+        </button>
+
+        {!session && (
+          <Link href="/Authentication/Signup">
+            <button className="text-neutral-900 tracking-wide border bg-neutral-200 sm:text-lg text-sm transition delay-50 p-2 rounded-2xl hover:scale-105">
+              Register
             </button>
+          </Link>
+        )}
 
-            {/* Conditional rendering of the ul based on isOpen state */}
+        <button
+          className="text-white rounded-full hover:bg-neutral-800 transition-all duration-200 text-4xl p-1.5"
+          onClick={toggleMenu}
+          aria-label="Open menu"
+        >
+          <TbMenuDeep strokeWidth={1} />
+        </button>
 
-            <div
-              className={`bg-black w-full gap-3 p-2 flex items-center justify-center flex-wrap text-slate-100 order-1 transition-all duration-300 ease-in-out ${
-                openMenu ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
-              } overflow-hidden`}
+        <ul
+          style={{ transitionProperty: "max-height, opacity" }}
+          className={`${
+            showmenu ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
+          } bg-black w-28 py-3 absolute z-30 right-0 top-16 transition-all duration-300 ease-in-out overflow-hidden rounded-b-lg gap-5 flex items-center justify-center flex-col`}
+        >
+          {logos.map((logo) => (
+            <Link key={logo.key} href={`/Games/page/1?console=${logo.slug}`}>
+              <div
+                className="text-stone-200 sm:text-3xl text-2xl transition delay-50 p-2 rounded-full hover:scale-110"
+                onClick={closeDropdown}
+              >
+                {logo.component}
+              </div>
+            </Link>
+          ))}
+          <Link href="/Games/page/1">
+            <button
+              className="font-bold text-white text-lg transition delay-50 p-2 rounded-full hover:scale-105"
+              onClick={closeDropdown}
             >
-              {logos.map((logo) => (
-                <Link
-                  key={logo.key}
-                  href={`/Games/page/1?console=${logo.slug}`}
-                >
-                  <div
-                    className="text-stone-200 text-3xl transition delay-50 p-2 rounded-full hover:scale-110"
-                    onClick={closeDropdown}
-                  >
-                    {logo.component}
-                  </div>
-                </Link>
-              ))}
-              {!session && (
-                <div className="flex gap-5">
-                  <Link href={"/Authentication/Signup"}>
-                    <button className="text-white uppercase italic font-black text-md transition delay-50 rounded-full hover:scale-110">
-                      SignUp
-                    </button>
-                  </Link>
-                  <Link href={"/Authentication/Signin"}>
-                    <button className="text-white uppercase italic font-black text-md transition delay-50  rounded-full hover:scale-110">
-                      LogIn
-                    </button>
-                  </Link>
-                </div>
-              )}
-              <Link href={"/Games/page/1"}>
-                <button className="text-white uppercase italic font-black text-md transition delay-50  rounded-full hover:scale-110">
-                  All Games
+              All Games
+            </button>
+          </Link>
+          {session && (
+            <div className="min-[900px]:hidden flex flex-col items-center gap-5">
+              <Link href="/Account/info">
+                <button className="text-cyan-400 uppercase italic font-black text-lg transition delay-50 p-2 rounded-full hover:scale-110">
+                  My Profile
                 </button>
               </Link>
-              {session && (
-                <div className="min-[900px]:hidden flex gap-3">
-                  <Link href={`/Account/info`}>
-                    <button className="text-cyan-400 italic font-black text-md transition delay-50 rounded-full hover:scale-110">
-                      My Profile
-                    </button>
-                  </Link>
-                  <div className="text-stone-200 text-md transition delay-50  rounded-full hover:scale-110">
-                    <Logout />
-                  </div>
-                </div>
-              )}
+              <div className="text-stone-200 text-lg transition delay-50 p-2 rounded-full hover:scale-110">
+                <Logout />
+              </div>
             </div>
-          </div>
-        ))}
+          )}
+        </ul>
+      </div>
+
+      {/* Mobile search overlay */}
+      {showSearch && (
+        <div className="md:hidden absolute inset-0 bg-black flex items-center gap-2 px-3 z-30">
+          <SearchBar className="w-full" />
+          <button
+            className="text-white text-2xl p-2 shrink-0 rounded-full hover:bg-neutral-800 transition-all duration-200"
+            onClick={() => setShowSearch(false)}
+            aria-label="Close search"
+          >
+            <AiOutlineClose />
+          </button>
+        </div>
+      )}
     </nav>
   );
 };

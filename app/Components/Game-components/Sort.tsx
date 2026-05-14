@@ -40,7 +40,7 @@ const Sort: React.FC<SortProps> = ({ consoleName, genre }) => {
       ref={index}
     >
       <button
-        className={`sort-btn pointer-events-auto rounded-2xl px-10 py-3 text-md border-none ${
+        className={`sort-btn pointer-events-auto rounded-2xl px-5 sm:px-10 py-3 text-md border-none ${
           isOpen ? "rounded-b-none" : "rounded-b-2xl"
         } `}
         onClick={toggleDropdown}
@@ -48,9 +48,9 @@ const Sort: React.FC<SortProps> = ({ consoleName, genre }) => {
         Order By
       </button>
       <div
-        className={`pointer-events-auto absolute top-[3rem] overflow-hidden divide-y text-md rounded-b-2xl bg-neutral-100 text-black flex flex-col transition-all duration-300 ${
+        className={`pointer-events-auto w-[6.5rem] sm:w-[9rem] absolute top-[3rem] overflow-hidden divide-y text-md rounded-b-2xl bg-neutral-100 text-black flex flex-col transition-all duration-300 ${
           isOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
-        } ${isConsole ? "w-[9.7rem]" : "w-[9rem]"}`}
+        }`}
         style={{ visibility: isOpen ? "visible" : "hidden" }}
         onClick={closeDropdown}
       >

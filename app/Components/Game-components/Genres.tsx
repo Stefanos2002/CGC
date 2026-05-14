@@ -45,7 +45,7 @@ const Genres: React.FC<GenresProps> = ({ genres, consoleName }) => {
       ref={index}
     >
       <button
-        className={`sort-btn pointer-events-auto rounded-2xl px-[4.4rem] py-3 text-md border-none ${
+        className={`sort-btn pointer-events-auto rounded-2xl px-10 sm:px-[4.4rem] py-3 text-md border-none ${
           isOpen ? "rounded-b-none" : "rounded-b-2xl"
         } `}
         onClick={toggleDropdown}
@@ -53,7 +53,7 @@ const Genres: React.FC<GenresProps> = ({ genres, consoleName }) => {
         Genres
       </button>
       <div
-        className={`pointer-events-auto top-[3rem] absolute rounded-b-2xl overflow-hidden overflow-y-auto divide-y text-md bg-neutral-100 flex flex-col text-center transition-all duration-300 ${
+        className={`pointer-events-auto w-[8.4rem] sm:w-[12rem] top-[3rem] absolute rounded-b-2xl overflow-hidden overflow-y-auto divide-y text-md bg-neutral-100 flex flex-col text-center transition-all duration-300 ${
           isOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
         }`}
         style={{ visibility: isOpen ? "visible" : "hidden" }}
@@ -62,9 +62,7 @@ const Genres: React.FC<GenresProps> = ({ genres, consoleName }) => {
         {genres.map((genre) => (
           <Link key={genre.id} href={buildGenreUrl(genre.slug)}>
             <ul
-              className={`text-black text-md transition delay-50 p-2 rounded-full hover:scale-105 ${
-                isConsole ? "w-[12rem]" : "w-[11.5rem]"
-              }`}
+              className={`text-black text-md transition delay-50 p-2 rounded-full hover:scale-105`}
               onClick={closeDropdown}
             >
               {genre.name}

@@ -32,31 +32,38 @@ interface PostResult {
 }
 
 interface SearchBarProps {
-  // No props needed anymore
+  className?: string;
 }
 
 const platformIcon = (slug: string, id: number) => {
   const iconProps = { size: 16, className: "text-slate-300", key: id };
   switch (slug) {
-    case "pc":          return <FaWindows {...iconProps} />;
-    case "playstation": return <FaPlaystation {...iconProps} />;
-    case "xbox":        return <FaXbox {...iconProps} />;
-    case "nintendo":    return <SiNintendoswitch {...iconProps} />;
-    case "mac":         return <FaApple {...iconProps} />;
-    case "linux":       return <FaLinux {...iconProps} />;
-    case "android":     return <FaAndroid {...iconProps} />;
-    case "ios":         return <FaApple {...iconProps} />;
-    default:            return null;
+    case "pc":
+      return <FaWindows {...iconProps} />;
+    case "playstation":
+      return <FaPlaystation {...iconProps} />;
+    case "xbox":
+      return <FaXbox {...iconProps} />;
+    case "nintendo":
+      return <SiNintendoswitch {...iconProps} />;
+    case "mac":
+      return <FaApple {...iconProps} />;
+    case "linux":
+      return <FaLinux {...iconProps} />;
+    case "android":
+      return <FaAndroid {...iconProps} />;
+    case "ios":
+      return <FaApple {...iconProps} />;
+    default:
+      return null;
   }
 };
 
-const SearchBar: React.FC<SearchBarProps> = () => {
+const SearchBar: React.FC<SearchBarProps> = ({ className }) => {
   const [search, setSearch] = useState<PostResult[]>([]);
   const [inputValue, setInputValue] = useState(""); // State to manage input value
   const [visible, setVisible] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1); // State to manage the selected index
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const resultsRef = useRef<HTMLFormElement>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
@@ -68,7 +75,6 @@ const SearchBar: React.FC<SearchBarProps> = () => {
       return;
     }
 
-    setIsLoading(true);
     try {
       const response = await fetch(
         `/api/searchGames?q=${encodeURIComponent(query)}`,
@@ -82,15 +88,12 @@ const SearchBar: React.FC<SearchBarProps> = () => {
     } catch (error) {
       console.error("Search error:", error);
       setSearch([]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   //handle case as you are writting in the search
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setIsTyping(value.length > 0);
     setInputValue(value);
     setVisible(true);
     const lowercaseValue = value.toLowerCase();
@@ -99,7 +102,6 @@ const SearchBar: React.FC<SearchBarProps> = () => {
     if (lowercaseValue === "") {
       setSearch([]);
       setSelectedIndex(-1);
-      setIsLoading(false);
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
@@ -260,7 +262,7 @@ const SearchBar: React.FC<SearchBarProps> = () => {
 
   return (
     <form
-      className="search relative w-[32rem] max-w-lg"
+      className={`search relative ${className ?? "w-[32rem] max-w-lg"}`}
       ref={resultsRef}
       onSubmit={handleSubmit}
     >
@@ -278,9 +280,12 @@ const SearchBar: React.FC<SearchBarProps> = () => {
             height:
               visible && search.length > 0
                 ? `${
-                    search.length === 1
-                      ? 8.5
-                      : search.length * (window.innerWidth < 550 ? 4.3 : 8.2)
+                    search.length *
+                      (window.innerWidth < 420
+                        ? 5.5
+                        : window.innerWidth < 550
+                          ? 6.5
+                          : 8.2)
                   }rem`
                 : "0",
             transition: "height 0.2s ease-in-out",
@@ -292,9 +297,9 @@ const SearchBar: React.FC<SearchBarProps> = () => {
             <Link
               key={index}
               href={`/Games/${result.slug}`}
-              className="flex container flex-row transition-all duration-300 ease-in-out hover:scale-[1.03] pl-6 hover:text-stone-400"
+              className="flex container items-center flex-row transition-all duration-300 ease-in-out hover:scale-[1.03] pl-2 sm:pl-6 hover:text-stone-400"
             >
-              <div className="relative overflow-hidden sm:w-44 sm:h-32 min-[420px]:w-40 min-[420px]:h-28 w-36 h-24 flex-shrink-0 flex-grow-0">
+              <div className="relative overflow-hidden w-20 h-14 min-[420px]:w-28 min-[420px]:h-20 sm:w-44 sm:h-32 flex-shrink-0 flex-grow-0">
                 {result.background_image && (
                   <Image
                     src={result.background_image}
@@ -304,21 +309,21 @@ const SearchBar: React.FC<SearchBarProps> = () => {
                   />
                 )}
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <div
                   onClick={() => handleAutoComplete(result.name)}
-                  className="search-result pt-3 uppercase font-bold italic cursor-pointer text-[16px] pl-6 pr-4"
+                  className="search-result pt-2 sm:pt-3 uppercase font-bold italic cursor-pointer text-[13px] sm:text-[16px] pl-2 pr-2 sm:pl-6 sm:pr-4 line-clamp-2"
                 >
                   {result.name}
                 </div>
                 {result.parent_platforms?.length > 0 && (
-                  <div className="pt-2 flex flex-row gap-2 flex-wrap pl-6 pr-4">
+                  <div className="pt-1 sm:pt-2 flex flex-row gap-1 sm:gap-2 flex-wrap pl-2 pr-2 sm:pl-6 sm:pr-4">
                     {result.parent_platforms.map(({ platform }) =>
                       platformIcon(platform.slug, platform.id),
                     )}
                   </div>
                 )}
-                <div className="py-2 cursor-pointer text-[15px] pl-6 pr-4">
+                <div className="py-1 sm:py-2 cursor-pointer text-[12px] sm:text-[15px] pl-2 pr-2 sm:pl-6 sm:pr-4">
                   Release Date: {result.released}
                 </div>
               </div>
