@@ -194,7 +194,7 @@ const NavBar = () => {
             {!session && (
               <div className="lg:flex hidden">
                 <Link href={"/Authentication/Signup"}>
-                  <button className="text-neutral-900 font-thin tracking-wider border bg-neutral-200 sm:text-lg text-md transition delay-50 p-2 rounded-2xl hover:scale-105">
+                  <button className="text-neutral-900 tracking-wide border bg-neutral-200 sm:text-lg text-md transition delay-50 p-2 rounded-2xl hover:scale-105">
                     Register
                   </button>
                 </Link>

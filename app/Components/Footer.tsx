@@ -9,7 +9,7 @@ function Footer() {
       <div className="w-full pt-4 justify-between flex lg:flex-row flex-col items-center">
         <div className="flex lg:flex-row flex-col w-full lg:justify-normal justify-center items-center lg:gap-3 gap-0">
           <Image
-            src="/assets/images/site-logo-cropped.png"
+            src="/assets/images/site-logo-cropped.webp"
             alt="site_logo"
             className="sm:h-20 h-16 object-cover mb-2 rounded-2xl"
             width={80}

@@ -3,7 +3,7 @@ import Link from "next/link";
 import React from "react";
 import Image from "next/legacy/image";
 
-const jokerImagePath = "/assets/images/joker.jpg";
+const jokerImagePath = "/assets/images/joker.webp";
 
 const Movies = () => {
   // const [isPlaying, setisPlaying] = useState(false);

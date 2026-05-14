@@ -13,13 +13,12 @@ const EDITION_KEYWORDS_PATTERN = [
 // "assassins" will match "Assassin's Creed"; "horizon zero dawn" matches "Horizon: Zero Dawn".
 function buildFlexibleRegex(query: string): string {
   // Strip apostrophes/colons/etc from the query itself
-  const normalized = query.replace(/['‘’':]/g, "").trim();
+  const normalized = query.replace(/[^\w\s]/g, "").trim();
   const words = normalized.split(/\s+/).filter(Boolean);
 
-  // Within each word, allow optional apostrophes/curly-quotes between chars
   const wordPatterns = words.map((word) => {
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return escaped.split("").join("[''‘’]*");
+    return escaped.split("").join("[^a-zA-Z0-9]{0,2}");
   });
 
   // Between words, allow any combination of spaces, colons, commas, hyphens

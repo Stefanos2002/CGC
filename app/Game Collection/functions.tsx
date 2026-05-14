@@ -697,10 +697,16 @@ export const searchGamesByName = async (
   query: string,
 ): Promise<PostResult[]> => {
   const gameCollection = await getGamesCollection();
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const normalized = query.replace(/[^\w\s]/g, "").trim();
+  const words = normalized.split(/\s+/).filter(Boolean);
+  const wordPatterns = words.map((word) => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return escaped.split("").join("[^a-zA-Z0-9]{0,2}");
+  });
+  const flexibleRegex = wordPatterns.join("[\\s:,\\-]*");
   const docs = (await gameCollection
     .find<PostResult>({
-      name: { $regex: escaped, $options: "i" },
+      name: { $regex: flexibleRegex, $options: "i" },
       ...getValidGameFilter(),
       $or: [
         { esrb_rating: null },

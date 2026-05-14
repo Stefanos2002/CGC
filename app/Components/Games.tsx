@@ -2,7 +2,7 @@
 import Link from "next/link";
 import React from "react";
 import Image from "next/legacy/image";
-const senuaImagePath = "/assets/images/senua.jpg";
+const senuaImagePath = "/assets/images/senua.webp";
 
 function Games() {
   return (
