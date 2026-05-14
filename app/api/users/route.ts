@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { addUser } from "@/app/User Collection/connection";
 import { NextRequest, NextResponse } from "next/server";
 

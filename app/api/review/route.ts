@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { addMovieReview } from "@/app/User Collection/connection";
 import { NextRequest, NextResponse } from "next/server";
 

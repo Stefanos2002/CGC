@@ -1,5 +1,5 @@
 // /app/api/users/verify.ts
-
+export const dynamic = 'force-dynamic';
 import { verifyUserEmail } from "@/app/User Collection/connection";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";

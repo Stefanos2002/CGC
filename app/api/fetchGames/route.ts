@@ -1,4 +1,5 @@
 // app/api/fetchGames/route.ts
+export const dynamic = 'force-dynamic';
 import { fetchAndCombineDataSimple } from "@/app/Game Collection/functions";
 import { NextRequest, NextResponse } from "next/server";
 

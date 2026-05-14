@@ -1,5 +1,5 @@
 // /app/api/users/login.ts
-
+export const dynamic = 'force-dynamic';
 import { findUserByEmail } from "@/app/User Collection/connection";
 import { signIn } from "next-auth/react";
 import { NextRequest, NextResponse } from "next/server";

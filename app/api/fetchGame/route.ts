@@ -1,4 +1,5 @@
 // app/api/fetchGame/route.ts
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
