@@ -181,6 +181,16 @@ let cachedGames: PostResult[] | null =
 let lastUpdated: Date | null =
   process.env.NODE_ENV !== "production" ? (global._lastUpdated ?? null) : null;
 
+// Reads games from MongoDB only — no RAWG API calls, safe to call at request time
+export const readGamesFromDB = async (): Promise<PostResult[]> => {
+  const gameCollection = await getGamesCollection();
+  const docs = (await gameCollection
+    .find<PostResult>({ ...getValidGameFilter() })
+    .project(minimalGameProjection)
+    .toArray()) as PostResult[];
+  return docs.map(normalizeGameDocument).filter(isMainstreamGame);
+};
+
 //MAIN FUNCTION RETURNING GAMES BASED ON YEAR
 export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
   const currentTime = new Date();
@@ -343,7 +353,7 @@ export const extractGenres = (games: PostResult[]): Genre[] => {
 // Cached for genre/console+genre pages that need all genres but don't fetch all games
 export const getCachedGenres = unstable_cache(
   async () => {
-    const games = await fetchAndCombineDataSimple();
+    const games = await readGamesFromDB();
     return extractGenres(games);
   },
   ["all-genres"],
