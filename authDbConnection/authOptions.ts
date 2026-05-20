@@ -65,12 +65,13 @@ export const authOptions: NextAuthOptions = {
     //JWTs(JSON web tokens) are used to store and verify user session data without saving anything on the server.
   },
   callbacks: {
-    async session({ session, token }) {
-      if (token.user) {
-        session.user = token.user as User;
+    async jwt({ token, user }) {
+      if (user) {
+        token.user = { ...user };
       }
-      return session;
+      return token;
     },
+
     async signIn({ user, account }) {
       if (user && account) {
         const email = user.email;
@@ -116,11 +117,11 @@ export const authOptions: NextAuthOptions = {
 
       return false; // Deny sign-in if no user or account is provided
     },
-    async jwt({ token, user }) {
-      if (user) {
-        token.user = { ...user };
+    async session({ session, token }) {
+      if (token.user) {
+        session.user = token.user as User;
       }
-      return token;
+      return session;
     },
   },
 };

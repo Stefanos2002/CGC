@@ -152,6 +152,7 @@ const isMainstreamGame = (game: Partial<PostResult>) => {
   const metacritic = Number(game.metacritic ?? 0);
   const ratingCount = Number(game.ratings_count ?? 0);
 
+  //this is used for only rendering games released up until today
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - MAINSTREAM_RECENT_MONTHS);
   const releaseDate = parseDateString(game.released);
