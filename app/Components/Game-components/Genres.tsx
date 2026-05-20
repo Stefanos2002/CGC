@@ -37,8 +37,6 @@ const Genres: React.FC<GenresProps> = ({ genres, consoleName }) => {
     return `/Games/page/1?${params.toString()}`;
   };
 
-  const isConsole = Boolean(consoleName);
-
   return (
     <div
       className={`wrapper relative pointer-events-none items-center z-10 group mt-12 text-white flex flex-col`}

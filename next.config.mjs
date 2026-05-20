@@ -19,7 +19,8 @@ const bundleAnalyzer = withBundleAnalyzer({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {    
+  images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -29,7 +30,7 @@ const nextConfig = {
   },
   compiler: {
     styledComponents: true,
-  }
+  },
 };
 
 export default bundleAnalyzer(nextConfig);
