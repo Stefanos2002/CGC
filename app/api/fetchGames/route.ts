@@ -1,6 +1,6 @@
 // app/api/fetchGames/route.ts
 export const dynamic = 'force-dynamic';
-import { fetchAndCombineDataSimple } from "@/app/Game Collection/functions";
+import { seedGamesDB } from "@/app/Game Collection/functions";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // const response = await fetch(`${basePosterUrl}?${apiPosterKey}`);
-    const data = await fetchAndCombineDataSimple();
+    const data = await seedGamesDB();
 
     // Validate that data is an array
     if (Array.isArray(data)) {

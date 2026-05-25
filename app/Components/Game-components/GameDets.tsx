@@ -5,7 +5,7 @@ import Screenshots from "./Screenshots";
 import { getServerSession } from "next-auth";
 import { findUserByEmail } from "@/app/User Collection/connection";
 import { authOptions } from "@/authDbConnection/authOptions";
-import { getGameInfoByName } from "@/app/Game Collection/functions";
+import { getGameBySlug } from "@/app/Game Collection/functions";
 import { BsController } from "react-icons/bs";
 import Image from "next/image";
 
@@ -21,7 +21,7 @@ const cleanDescription = (text: string): string =>
     .trim();
 
 const GameDets = async ({ params }: { params: any }) => {
-  const game = await getGameInfoByName(params.name);
+  const game = await getGameBySlug(params.name);
   const session = await getServerSession(authOptions);
   const userEmail = session?.user?.email; // You get this from session
 

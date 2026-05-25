@@ -5,23 +5,16 @@ import { IoStarSharp } from "react-icons/io5";
 import { User } from "../Constants/constants";
 import { PostResult, Genre, Platform } from "../Constants/constants";
 
-// Survive HMR reloads in dev — same pattern as the mongo clientPromise
 declare global {
   var _gamesDbInitialized: boolean | undefined;
   var _cachedGames: PostResult[] | null | undefined;
   var _lastUpdated: Date | null | undefined;
 }
 
-//https://api.rawg.io/api/games
 const basePosterUrl = process.env.NEXT_PUBLIC_BASE_POSTER_URL;
-
-//api key for connection to RAWG database
 const apiPosterKey = process.env.NEXT_PUBLIC_API_KEY;
-
-//combining href with api key
 const apiPosterUrl = `${basePosterUrl}?${apiPosterKey}`;
 
-//THIS FUNCTION RETURNS THE GAME DATA PER PAGE (STARTING FROM PAGE 1)
 const getGameData = async (url: string, page: number) => {
   try {
     const fullUrl = `${url}&page=${page}`;
@@ -30,9 +23,7 @@ const getGameData = async (url: string, page: number) => {
     if (!res.ok) {
       console.error(`RAWG API returned ${res.status} for URL: ${fullUrl}`);
       if (res.status === 404) {
-        console.error(
-          "This might indicate an invalid API key or changed API endpoint",
-        );
+        console.error("This might indicate an invalid API key or changed API endpoint");
       }
       throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -143,7 +134,6 @@ const isGameReleasedAndInRange = (game: Partial<PostResult>) => {
 };
 
 const isMainstreamGame = (game: Partial<PostResult>) => {
-  if (!game.description_raw) return false;
   if (!isGameReleasedAndInRange(game)) return false;
   if (isEditionVariant(game)) return false;
   if (isAdultGame(game)) return false;
@@ -152,7 +142,6 @@ const isMainstreamGame = (game: Partial<PostResult>) => {
   const metacritic = Number(game.metacritic ?? 0);
   const ratingCount = Number(game.ratings_count ?? 0);
 
-  //this is used for only rendering games released up until today
   const cutoff = new Date();
   cutoff.setMonth(cutoff.getMonth() - MAINSTREAM_RECENT_MONTHS);
   const releaseDate = parseDateString(game.released);
@@ -166,7 +155,6 @@ const isMainstreamGame = (game: Partial<PostResult>) => {
   );
 };
 
-// Relaxed tier: fills remaining slots with notable games that missed the strict bar
 const isNotableGame = (game: Partial<PostResult>) => {
   if (!isGameReleasedAndInRange(game)) return false;
   if (isEditionVariant(game)) return false;
@@ -183,8 +171,8 @@ let cachedGames: PostResult[] | null =
 let lastUpdated: Date | null =
   process.env.NODE_ENV !== "production" ? (global._lastUpdated ?? null) : null;
 
-// Reads games from MongoDB only — no RAWG API calls, safe to call at request time
-export const readGamesFromDB = async (): Promise<PostResult[]> => {
+// Layer 1 — Seeding: reads quality games from DB for display
+export const getAllGames = async (): Promise<PostResult[]> => {
   const gameCollection = await getGamesCollection();
   const docs = (await gameCollection
     .find<PostResult>({ ...getValidGameFilter() })
@@ -193,14 +181,13 @@ export const readGamesFromDB = async (): Promise<PostResult[]> => {
   return docs.map(normalizeGameDocument).filter(isMainstreamGame);
 };
 
-//MAIN FUNCTION RETURNING GAMES BASED ON YEAR
-export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
+// Layer 1 — Seeding: populates DB with basic game metadata from RAWG list endpoint
+export const seedGamesDB = async (): Promise<PostResult[]> => {
   const currentTime = new Date();
 
-  //LOGIC TO RETURN NEW UPDATED CONTENT IF A MONTH HAS PASSED
   if (cachedGames && lastUpdated) {
     const timeDifference = currentTime.getTime() - lastUpdated.getTime();
-    const oneMonthInMs = 30 * 24 * 60 * 60 * 1000; // Approximate one month in milliseconds
+    const oneMonthInMs = 30 * 24 * 60 * 60 * 1000;
 
     if (timeDifference < oneMonthInMs) {
       console.log("Returning cached games");
@@ -216,12 +203,10 @@ export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
       const endYear = Math.min(year + 4, 2026);
       dateRanges.push(`${year}-01-01,${endYear}-12-31`);
     }
-    dateRanges.reverse(); // most recent years first so new games get priority
+    dateRanges.reverse();
 
     const existingDocs = (await gameCollection
-      .find<PostResult>({
-        ...getValidGameFilter(),
-      })
+      .find<PostResult>({ ...getValidGameFilter() })
       .project(minimalGameProjection)
       .toArray()) as PostResult[];
 
@@ -246,7 +231,6 @@ export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
 
     for (const dateRange of dateRanges) {
       if (remainingSpace <= 0) break;
-      const [start, end] = dateRange.split(",");
       console.log(`Checking date range: ${dateRange}`);
 
       for (let page = 1; page <= 20 && remainingSpace > 0; page += 1) {
@@ -264,9 +248,7 @@ export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
 
         if (!filteredResults.length) {
           if (page === 1) {
-            console.log(
-              `No mainstream RAWG results for date range ${dateRange}`,
-            );
+            console.log(`No mainstream RAWG results for date range ${dateRange}`);
           }
           if (gameResults.length < RANGE_PAGE_SIZE) break;
           continue;
@@ -283,9 +265,7 @@ export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
             },
           }));
 
-          await gameCollection.bulkWrite(bulkOperations, {
-            ordered: false,
-          });
+          await gameCollection.bulkWrite(bulkOperations, { ordered: false });
 
           gamesToInsert.forEach((game) => {
             existingIds.add(game.id);
@@ -293,18 +273,13 @@ export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
           });
 
           remainingSpace = Math.max(0, remainingSpace - gamesToInsert.length);
-          console.log(
-            `Inserted ${gamesToInsert.length} games for ${dateRange} page ${page}`,
-          );
+          console.log(`Inserted ${gamesToInsert.length} games for ${dateRange} page ${page}`);
         }
 
-        if (gameResults.length < RANGE_PAGE_SIZE) {
-          break;
-        }
+        if (gameResults.length < RANGE_PAGE_SIZE) break;
       }
     }
 
-    // Second tier: fill remaining slots with notable games already in the DB
     if (remainingSpace > 0) {
       const notableGames = existingDocs
         .map(normalizeGameDocument)
@@ -327,11 +302,11 @@ export const fetchAndCombineDataSimple = async (): Promise<PostResult[]> => {
     console.log(`Total games fetched: ${cachedGames.length}`);
     return cachedGames;
   } catch (error) {
-    console.error("Error fetching and combining data:", error);
+    console.error("Error seeding games DB:", error);
     throw error;
   }
 };
-//function to sort the games based on their release
+
 export const sortGamesByRelease = (games: PostResult[]) => {
   return games.sort((a, b) => {
     const dateA = new Date(a.released);
@@ -352,251 +327,22 @@ export const extractGenres = (games: PostResult[]): Genre[] => {
   return Array.from(genreMap.values());
 };
 
-// Cached for genre/console+genre pages that need all genres but don't fetch all games
 export const getCachedGenres = unstable_cache(
   async () => {
-    const games = await readGamesFromDB();
+    const games = await getAllGames();
     return extractGenres(games);
   },
   ["all-genres"],
   { revalidate: 3600 },
 );
 
-// Single batched DB query instead of N individual findOne calls
-export const fetchGameDetailsBatch = async (
-  games: PostResult[],
-): Promise<PostResult[]> => {
-  if (!games.length) return [];
-  const gameCollection = await getGamesCollection();
-  const ids = games.map((g) => g.id);
-  const existingDocs = await gameCollection
-    .find<PostResult>({ id: { $in: ids } })
-    .toArray();
-  const docMap = new Map(
-    existingDocs.map((d) => [d.id, normalizeGameDocument(d)]),
-  );
-  return Promise.all(
-    games.map((game) => {
-      const doc = docMap.get(game.id);
-      if (doc?.description_raw) return doc;
-      return fetchGameDetails(game);
-    }),
-  );
-};
-
-// export const shuffleArray = <T,>(array: T[]): void => {
-//   for (let i = array.length - 1; i > 0; i--) {
-//     const j = Math.floor(Math.random() * (i + 1));
-//     [array[i], array[j]] = [array[j], array[i]];
-//   }
-// };
-
-const platformIds: { [key: string]: number } = {
-  pc: 1,
-  playstation: 2,
-  xbox: 3,
-  nintendo: 7,
-};
-
-const convertDocuments = (docs: PostResult[]) =>
-  docs.map(normalizeGameDocument);
-
-export const getGamesCollection = async (): Promise<Collection<Document>> => {
-  try {
-    const client = await clientPromise;
-    const db = client.db();
-    const collection = db.collection("games");
-    if (!global._gamesDbInitialized) {
-      global._gamesDbInitialized = true;
-      await collection.createIndex(
-        { id: 1 },
-        { unique: true, background: true },
-      );
-      await collection.createIndex({ slug: 1 }, { background: true });
-      await collection.createIndex({ released: 1 }, { background: true });
-      await collection.createIndex({ "genres.slug": 1 }, { background: true });
-      await collection.createIndex(
-        { "parent_platforms.platform.id": 1 },
-        { background: true },
-      );
-    }
-    return collection;
-  } catch (error) {
-    console.error("Error getting games collection:", error);
-    throw error;
-  }
-};
-
-// this works for the company logo games
-export const fetchAndCombineData = async (name: string) => {
-  const platformId = platformIds[name.toLowerCase()];
-  if (!platformId) {
-    throw new Error(`Invalid platform name: ${name}`);
-  }
-
-  const gameCollection = await getGamesCollection();
-  const filteredGames = (await gameCollection
-    .find<PostResult>({
-      ...getValidGameFilter(),
-      "parent_platforms.platform.id": platformId,
-    })
-    .project(minimalGameProjection)
-    .toArray()) as PostResult[];
-
-  return convertDocuments(filteredGames);
-};
-
-// this works for the company page games
-export const fetchByGenre = async (slug: string) => {
-  const gameCollection = await getGamesCollection();
-  const filteredGames = (await gameCollection
-    .find<PostResult>({
-      ...getValidGameFilter(),
-      "genres.slug": slug,
-    })
-    .project(minimalGameProjection)
-    .toArray()) as PostResult[];
-
-  return convertDocuments(filteredGames);
-};
-
-export const fetchByGenreName = async (name: string) => {
-  const allGames = await fetchByGenre(name);
-  return allGames.slice().sort((a, b) => a.name.localeCompare(b.name));
-};
-
-export const fetchByGenreRating = async (name: string) => {
-  const allGames = await fetchByGenre(name);
-  return allGames.slice().sort((a, b) => b.rating - a.rating);
-};
-
-export const fetchByGenreConsole = async (name: string, slug: string) => {
-  const platformId = platformIds[name.toLowerCase()];
-  if (!platformId) {
-    throw new Error(`Invalid platform name: ${name}`);
-  }
-
-  const gameCollection = await getGamesCollection();
-  const filteredGames = (await gameCollection
-    .find<PostResult>({
-      ...getValidGameFilter(),
-      "parent_platforms.platform.id": platformId,
-      "genres.slug": slug,
-    })
-    .project(minimalGameProjection)
-    .toArray()) as PostResult[];
-
-  return convertDocuments(filteredGames);
-};
-
-export const fetchByGenreConsoleName = async (name: string, slug: string) => {
-  const allGames = await fetchByGenreConsole(name, slug);
-  return allGames.slice().sort((a, b) => a.name.localeCompare(b.name));
-};
-
-export const fetchByGenreConsoleRating = async (name: string, slug: string) => {
-  const allGames = await fetchByGenreConsole(name, slug);
-  return allGames.slice().sort((a, b) => b.rating - a.rating);
-};
-
-// this function sorts the greatest games first
-export const fetchByRating = async () => {
-  const gameCollection = await getGamesCollection();
-  const sortedGames = (await gameCollection
-    .find<PostResult>({
-      ...getValidGameFilter(),
-    })
-    .project(minimalGameProjection)
-    .sort({ rating: -1 })
-    .toArray()) as PostResult[];
-
-  return convertDocuments(sortedGames);
-};
-
-// this function sorts the greatest games first
-export const fetchByName = async () => {
-  const gameCollection = await getGamesCollection();
-  const sortedGames = (await gameCollection
-    .find<PostResult>({
-      ...getValidGameFilter(),
-    })
-    .project(minimalGameProjection)
-    .sort({ name: 1 })
-    .toArray()) as PostResult[];
-
-  return convertDocuments(sortedGames);
-};
-
-// this function sorts the greatest games first
-export const fetchByRatingConsole = async (name: string) => {
-  const platformId = platformIds[name.toLowerCase()];
-  if (!platformId) {
-    throw new Error(`Invalid platform name: ${name}`);
-  }
-
-  const gameCollection = await getGamesCollection();
-  const sortedGames = (await gameCollection
-    .find<PostResult>({
-      ...getValidGameFilter(),
-      "parent_platforms.platform.id": platformId,
-    })
-    .project(minimalGameProjection)
-    .sort({ rating: -1 })
-    .toArray()) as PostResult[];
-
-  return convertDocuments(sortedGames);
-};
-
-// this function sorts by name alphabetically
-export const fetchByNameConsole = async (name: string) => {
-  const platformId = platformIds[name.toLowerCase()];
-  if (!platformId) {
-    throw new Error(`Invalid platform name: ${name}`);
-  }
-
-  const gameCollection = await getGamesCollection();
-  const sortedGames = (await gameCollection
-    .find<PostResult>({
-      ...getValidGameFilter(),
-      "parent_platforms.platform.id": platformId,
-    })
-    .project(minimalGameProjection)
-    .sort({ name: 1 })
-    .toArray()) as PostResult[];
-
-  return convertDocuments(sortedGames);
-};
-
-//FUNCTION THAT RETURNS 15 GAMES PER PAGE
-export const paginateGames = (
-  games: PostResult[],
-  page: number,
-  pageSize: number,
-) => {
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize;
-  return games.slice(start, end);
-};
-
-const hasFullDetails = (game: PostResult) => {
-  return Boolean(
-    game.description_raw &&
-    game.parent_platforms &&
-    game.genres &&
-    game.slug &&
-    game.background_image,
-  );
-};
-
-//FUNCTION TO GET GAME DETAILS
-export const fetchGameDetails = async (game: PostResult) => {
+// Layer 2 — Enrichment: fetches full details for a single game and stores in DB
+const enrichGame = async (game: PostResult) => {
   try {
     if (hasFullDetails(game)) return game;
 
     const gameCollection = await getGamesCollection();
-    const existingGame = await gameCollection.findOne<PostResult>({
-      id: game.id,
-    });
+    const existingGame = await gameCollection.findOne<PostResult>({ id: game.id });
     if (existingGame && existingGame.description_raw) {
       return normalizeGameDocument({ ...existingGame, ...game });
     }
@@ -621,27 +367,148 @@ export const fetchGameDetails = async (game: PostResult) => {
 
     return normalizeGameDocument(detailedGame as PostResult);
   } catch (error) {
-    console.error("Error fetching game details:", error);
+    console.error("Error enriching game:", error);
     throw error;
   }
 };
 
-//FUNCTION THAT ROUNDS NUMBER OF RATING (USED ON GAME DETAILS)
-export const roundNum = (rating_count: number) => {
+// Layer 2 — Enrichment: lazily fetches and stores full details for a batch of games
+export const enrichGames = async (games: PostResult[]): Promise<PostResult[]> => {
+  if (!games.length) return [];
+  const gameCollection = await getGamesCollection();
+  const ids = games.map((g) => g.id);
+  const existingDocs = await gameCollection
+    .find<PostResult>({ id: { $in: ids } })
+    .toArray();
+  const docMap = new Map(
+    existingDocs.map((d) => [d.id, normalizeGameDocument(d)]),
+  );
+  return Promise.all(
+    games.map((game) => {
+      const doc = docMap.get(game.id);
+      if (doc?.description_raw) return doc;
+      return enrichGame(game);
+    }),
+  );
+};
+
+const platformIds: { [key: string]: number } = {
+  pc: 1,
+  playstation: 2,
+  xbox: 3,
+  nintendo: 7,
+};
+
+const convertDocuments = (docs: PostResult[]) =>
+  docs.map(normalizeGameDocument);
+
+export const getGamesCollection = async (): Promise<Collection<Document>> => {
+  try {
+    const client = await clientPromise;
+    const db = client.db();
+    const collection = db.collection("games");
+    if (!global._gamesDbInitialized) {
+      global._gamesDbInitialized = true;
+      await collection.createIndex({ id: 1 }, { unique: true, background: true });
+      await collection.createIndex({ slug: 1 }, { background: true });
+      await collection.createIndex({ released: 1 }, { background: true });
+      await collection.createIndex({ "genres.slug": 1 }, { background: true });
+      await collection.createIndex(
+        { "parent_platforms.platform.id": 1 },
+        { background: true },
+      );
+    }
+    return collection;
+  } catch (error) {
+    console.error("Error getting games collection:", error);
+    throw error;
+  }
+};
+
+// Layer 3 — Read: DB queries with optional in-memory sort applied by the caller
+export const getGamesByPlatform = async (name: string) => {
+  const platformId = platformIds[name.toLowerCase()];
+  if (!platformId) {
+    throw new Error(`Invalid platform name: ${name}`);
+  }
+
+  const gameCollection = await getGamesCollection();
+  const filteredGames = (await gameCollection
+    .find<PostResult>({
+      ...getValidGameFilter(),
+      "parent_platforms.platform.id": platformId,
+    })
+    .project(minimalGameProjection)
+    .toArray()) as PostResult[];
+
+  return convertDocuments(filteredGames);
+};
+
+export const getGamesByGenre = async (slug: string) => {
+  const gameCollection = await getGamesCollection();
+  const filteredGames = (await gameCollection
+    .find<PostResult>({
+      ...getValidGameFilter(),
+      "genres.slug": slug,
+    })
+    .project(minimalGameProjection)
+    .toArray()) as PostResult[];
+
+  return convertDocuments(filteredGames);
+};
+
+export const getGamesByPlatformAndGenre = async (name: string, slug: string) => {
+  const platformId = platformIds[name.toLowerCase()];
+  if (!platformId) {
+    throw new Error(`Invalid platform name: ${name}`);
+  }
+
+  const gameCollection = await getGamesCollection();
+  const filteredGames = (await gameCollection
+    .find<PostResult>({
+      ...getValidGameFilter(),
+      "parent_platforms.platform.id": platformId,
+      "genres.slug": slug,
+    })
+    .project(minimalGameProjection)
+    .toArray()) as PostResult[];
+
+  return convertDocuments(filteredGames);
+};
+
+export const paginateGames = (
+  games: PostResult[],
+  page: number,
+  pageSize: number,
+) => {
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  return games.slice(start, end);
+};
+
+const hasFullDetails = (game: PostResult) => {
+  return Boolean(
+    game.description_raw &&
+    game.parent_platforms &&
+    game.genres &&
+    game.slug &&
+    game.background_image,
+  );
+};
+
+export const formatCount = (rating_count: number) => {
   let newNum;
   if (rating_count >= 1000) newNum = (rating_count / 1000).toFixed(1) + "K";
   else return rating_count;
   return newNum;
 };
 
-//FUNCTION THAT CONVERTS RATING TO STARS (USED ON GAME DETAILS)
-export const convertToStars = (rating: number) => {
+export const renderStarRating = (rating: number) => {
   const stars: JSX.Element[] = [];
   const whole = Math.floor(rating);
   const remainder = rating - whole;
   const percentage_r = `${remainder * 100}%`;
 
-  // Define colors based on rating range
   const getColor = (rating: number) => {
     if (rating < 3) return "darkorange";
     if (rating < 4) return "#C4B454";
@@ -650,21 +517,15 @@ export const convertToStars = (rating: number) => {
 
   const color = getColor(rating);
 
-  // Add full stars
   for (let i = 0; i < whole; i++) {
     stars.push(
       <IoStarSharp
         key={i}
-        style={{
-          background: color,
-          fontSize: "24px",
-          padding: "2px",
-        }}
+        style={{ background: color, fontSize: "24px", padding: "2px" }}
       />,
     );
   }
 
-  // Add partial star if there's a remainder
   if (remainder > 0) {
     stars.push(
       <IoStarSharp
@@ -678,16 +539,11 @@ export const convertToStars = (rating: number) => {
     );
   }
 
-  // Add empty stars to complete 5
   while (stars.length < 5) {
     stars.push(
       <IoStarSharp
         key={stars.length}
-        style={{
-          background: "grey",
-          fontSize: "24px",
-          padding: "2px",
-        }}
+        style={{ background: "grey", fontSize: "24px", padding: "2px" }}
       />,
     );
   }
@@ -695,9 +551,7 @@ export const convertToStars = (rating: number) => {
   return stars;
 };
 
-export const searchGamesByName = async (
-  query: string,
-): Promise<PostResult[]> => {
+export const searchGames = async (query: string): Promise<PostResult[]> => {
   const gameCollection = await getGamesCollection();
   const normalized = query
     .replace(/[^\w\s]/g, " ")
@@ -724,8 +578,7 @@ export const searchGamesByName = async (
   return docs.map(normalizeGameDocument);
 };
 
-//FUNCTION TO FETCH GAME INFORMATION (USED ON PAGE UNDER NAME)
-export const getGameInfoByName = async (name: string) => {
+export const getGameBySlug = async (name: string) => {
   const gameCollection = await getGamesCollection();
 
   const existingGame = await gameCollection.findOne<PostResult>({ slug: name });
@@ -748,31 +601,25 @@ export const getGameInfoByName = async (name: string) => {
   return normalizeGameDocument({ ...data } as PostResult);
 };
 
-//FUNCTIONS TO FETCH USER REVIEWS ON ALL USERS BASED ON GAME
 export const getUserReviews = async (allUsers: User[], gameId: number) => {
-  // Process all users asynchronously and return reviews filtered by gameId
   const gameReviews = allUsers
     ?.flatMap((user) =>
       (user.user_reviews || []).map((review) => ({
         ...review,
         username: user.username || user.name,
       })),
-    ) // Flatten all user reviews from each user
-    .filter((review) => review.gameId === gameId) // Filter reviews by gameId
+    )
+    .filter((review) => review.gameId === gameId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return gameReviews;
 };
 
-//FUNCTION TO FETCH GAME SCREENSHOTS
 export async function getScreenshots(slug: string) {
   try {
     const res = await fetch(
       `${basePosterUrl}/${slug}/screenshots?${apiPosterKey}`,
-      {
-        // Adding no-store ensures fresh data on each request if needed
-        cache: "no-store",
-      },
+      { cache: "no-store" },
     );
 
     if (!res.ok) {

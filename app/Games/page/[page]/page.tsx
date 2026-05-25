@@ -4,15 +4,15 @@ import MainPage from "@/app/Components/Game-components/MainPage";
 import NavBar from "@/app/Components/Game-components/NavBar";
 import { pageSize } from "@/app/Constants/constants";
 import {
-  readGamesFromDB,
-  fetchAndCombineData,
-  fetchByGenre,
-  fetchByGenreConsole,
-  searchGamesByName,
+  getAllGames,
+  getGamesByPlatform,
+  getGamesByGenre,
+  getGamesByPlatformAndGenre,
+  searchGames,
   paginateGames,
   extractGenres,
   sortGamesByRelease,
-  fetchGameDetailsBatch,
+  enrichGames,
   getCachedGenres,
 } from "@/app/Game Collection/functions";
 import Sort from "@/app/Components/Game-components/Sort";
@@ -35,15 +35,15 @@ const Posts = async ({ params, searchParams }: PageProps) => {
 
     let gameData;
     if (search) {
-      gameData = await searchGamesByName(search);
+      gameData = await searchGames(search);
     } else if (consoleName && genre) {
-      gameData = await fetchByGenreConsole(consoleName, genre);
+      gameData = await getGamesByPlatformAndGenre(consoleName, genre);
     } else if (consoleName) {
-      gameData = await fetchAndCombineData(consoleName);
+      gameData = await getGamesByPlatform(consoleName);
     } else if (genre) {
-      gameData = await fetchByGenre(genre);
+      gameData = await getGamesByGenre(genre);
     } else {
-      gameData = await readGamesFromDB();
+      gameData = await getAllGames();
     }
 
     if (sort === "name-first") {
@@ -56,7 +56,7 @@ const Posts = async ({ params, searchParams }: PageProps) => {
 
     const genres = genre ? await getCachedGenres() : extractGenres(gameData);
     const paginatedGames = paginateGames(gameData, page, pageSize);
-    const detailedGames = await fetchGameDetailsBatch(paginatedGames);
+    const detailedGames = await enrichGames(paginatedGames);
 
     return (
       <div>

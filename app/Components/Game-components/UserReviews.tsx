@@ -1,5 +1,5 @@
 import {
-  getGameInfoByName,
+  getGameBySlug,
   getUserReviews,
 } from "@/app/Game Collection/functions";
 import { findAllUsers } from "@/app/User Collection/connection";
@@ -8,7 +8,7 @@ import { authOptions } from "@/authDbConnection/authOptions";
 import React from "react";
 
 const UserReviews = async ({ params }: { params: any }) => {
-  const game = await getGameInfoByName(params.name);
+  const game = await getGameBySlug(params.name);
   const session = await getServerSession(authOptions);
   let allUsers;
   // Fetch all users from MongoDB
