@@ -26,6 +26,12 @@ function Signin() {
       setErrorMessages([
         "This email is already associated with another account. Please use a different email or log in with the existing credentials.",
       ]);
+    } else if (error === "OAuthCallback") {
+      setErrorMessages([
+        "Sign in with Google failed. Please try again.",
+      ]);
+    } else if (error === "AccessDenied") {
+      setErrorMessages(["Access was denied. Please try again."]);
     }
   }, [error]);
 

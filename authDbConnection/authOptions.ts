@@ -58,16 +58,27 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   pages: {
-    signIn: "/Signin", // Customize the sign-in page URL if needed
+    signIn: "/Authentication/Signin",
   },
   session: {
     strategy: "jwt",
     //JWTs(JSON web tokens) are used to store and verify user session data without saving anything on the server.
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        token.user = { ...user };
+        if (account?.provider && account.provider !== "credentials") {
+          // For OAuth users, fetch the MongoDB record to get the real _id
+          const dbUser = await findUserByEmail(user.email || "");
+          token.user = {
+            id: dbUser?._id?.toString() ?? "",
+            email: user.email,
+            name: user.name,
+            image: (user as { image?: string }).image ?? dbUser?.profilePicture ?? "",
+          };
+        } else {
+          token.user = { ...user };
+        }
       }
       return token;
     },
@@ -104,13 +115,18 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Create a new user if it does not exist
-        await addUserOath({
-          email: email ?? "",
-          name: name ?? "",
-          profilePicture: user.image || "", // Set a default or fetch from provider
-          isVerified: true, // OAuth users are considered verified
-          provider: account.provider, // Track the provider (google, github, credentials, etc.)
-        });
+        try {
+          await addUserOath({
+            email: email ?? "",
+            name: name ?? "",
+            profilePicture: user.image || "",
+            isVerified: true,
+            provider: account.provider,
+          });
+        } catch (error) {
+          console.error("Failed to create OAuth user:", error);
+          return false;
+        }
 
         return true; // Allow sign-in
       }

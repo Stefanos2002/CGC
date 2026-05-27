@@ -10,7 +10,6 @@ let db: Db | undefined;
 let users: Collection<User> | undefined;
 
 async function init(): Promise<void> {
-  if (db) return;
   try {
     client = await clientPromise;
     db = client.db();
@@ -20,10 +19,6 @@ async function init(): Promise<void> {
     throw new Error("Failed to establish connection to database");
   }
 }
-
-(async () => {
-  await init();
-})();
 
 export const addUser = async (data: User) => {
   try {
@@ -84,20 +79,10 @@ export const addUserOath = async (data: User) => {
     if (!users) await init();
     if (!users) throw new Error("Users collection is not initialized");
 
-    // Destructure username and email from the data
     const { name, email } = data;
 
-    // Check if the username or email already exists
-    const { usernameExists, emailExists } = await checkUserExists(
-      name || "",
-      email
-    );
-
-    if (usernameExists && emailExists) {
-      throw new Error("Username and Email already exist");
-    } else if (usernameExists) {
-      throw new Error("Username already exists");
-    } else if (emailExists) {
+    const emailExists = await users.findOne({ email });
+    if (emailExists) {
       throw new Error("Email already exists");
     }
 

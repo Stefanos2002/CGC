@@ -17,14 +17,9 @@ declare global {
 MongoDB client promise (clientPromise) in a global variable 
 (global._mongoClientPromise). This prevents creating a new 
 MongoDB connection every time the code is executed */
-if (process.env.NODE_ENV !== "production") {
-  if (!global._mongoClientPromise) {
-    global._mongoClientPromise = client.connect();
-  }
-
-  clientPromise = global._mongoClientPromise;
-} else {
-  clientPromise = client.connect();
+if (!global._mongoClientPromise) {
+  global._mongoClientPromise = client.connect();
 }
+clientPromise = global._mongoClientPromise;
 
 export default clientPromise;
