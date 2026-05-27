@@ -1,27 +1,39 @@
 "use client";
 import { useEffect, useState, MouseEvent } from "react";
-import UserOptions from "./UserOptions";
+import AccountPageShell from "./AccountPageShell";
 import Popup from "../Popup";
 import bcrypt from "bcryptjs";
 import { UploadButton } from "@/app/Uploadthing/uploadthing";
-import { useSession, signOut } from "next-auth/react";
-import Footer from "../Footer";
-import Link from "next/link";
+import { signOut } from "next-auth/react";
 import Image from "next/image";
+import { useAccountUser } from "./useAccountUser";
+
+const inputClass =
+  "w-full bg-white/5 border border-white/15 text-white rounded-lg px-3 py-2.5 focus:outline-none focus:border-cyan-500/50 transition-colors text-sm placeholder:text-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed";
+const labelClass =
+  "text-xs font-semibold uppercase tracking-wider text-neutral-400";
 
 const AccountInfo = () => {
-  const { data: session } = useSession();
+  const { user, session, isLoaded } = useAccountUser();
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
-  const [user, setUser] = useState<any>(null);
-  const [isSuccess, setIsSuccess] = useState(true);
   const [hasProvider, setHasProvider] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [initialData, setInitialData] = useState({ username: "", email: "" });
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    passwordre: "",
+  });
 
   useEffect(() => {
-    if (isSuccess && user) setIsLoaded(true);
-  }, [isSuccess, user]);
+    if (!user) return;
+    setHasProvider(user.provider !== "credentials");
+    const base = { username: user.username, email: user.email };
+    setInitialData(base);
+    setFormData({ ...base, password: "", passwordre: "" });
+  }, [user]);
 
   const handleDeleteAccount = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -29,95 +41,34 @@ const AccountInfo = () => {
   };
 
   const confirmDelete = async () => {
-    setIsDeleting(true); // Indicate that the deletion process is starting
-
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/users/${user._id}/deleteAccount`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userid: user._id }), // Ensure you are passing the correct userId
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userid: user._id }),
       });
-
       if (response.ok) {
-        // Delay for 2 seconds before signing out
-        setTimeout(() => {
-          signOut({ callbackUrl: "/" });
-        }, 2000);
+        setTimeout(() => { signOut({ callbackUrl: "/" }); }, 2000);
       } else {
         const errorData = await response.json();
-        alert(`Error: ${errorData.message}`); // You might want to handle this in a more user-friendly way
-        setIsDeleting(false); // Reset deleting state if there's an error
+        alert(`Error: ${errorData.message}`);
+        setIsDeleting(false);
       }
     } catch (error) {
       console.error("Failed to delete account:", error);
-      alert("An error occurred while deleting the account."); // Handle this error gracefully
-      setIsDeleting(false); // Reset deleting state on error
+      alert("An error occurred while deleting the account.");
+      setIsDeleting(false);
     }
   };
 
   const cancelDelete = () => {
     setShowPopup(false);
-    setIsDeleting(false); // Reset deleting state if user cancels
+    setIsDeleting(false);
   };
 
-  // Store initial data for comparison
-  const [initialData, setInitialData] = useState({
-    username: "",
-    email: "",
-  });
-
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    passwordre: "",
-  });
-  //   const { userid } = params;
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await fetch(
-          `/api/getUserDetails/${session?.user?.email}`,
-          {
-            method: "GET",
-          }
-        );
-        const data = await response.json();
-        setUser(data);
-
-        // Check if user has a provider
-        if (data.provider !== "credentials") {
-          setHasProvider(true);
-        } else {
-          setHasProvider(false);
-        }
-        // Set both the initial and current form data with the fetched data
-        const fetchedData = {
-          username: data.username,
-          email: data.email,
-          password: "",
-          passwordre: "",
-        };
-
-        setInitialData(fetchedData);
-        setFormData(fetchedData);
-      } catch (error) {
-        console.error("Failed to fetch user:", error);
-        setIsSuccess(false);
-      }
-    };
-
-    fetchUser();
-  }, [session?.user?.email]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -130,7 +81,7 @@ const AccountInfo = () => {
       !formData.passwordre.trim()
     ) {
       alert("Nothing to update");
-      return; // No need to proceed further
+      return;
     }
 
     const usernameRegex = /^(?=.*[A-Z])(?=.*\d)[A-Za-z\d\W]{10,}$/;
@@ -140,7 +91,6 @@ const AccountInfo = () => {
       );
     }
 
-    // Password validation
     if (formData.password.trim() || formData.passwordre.trim()) {
       const passwordRegex = /^(?=.*[A-Z])[A-Za-z\d\W]{10,}$/;
       if (!passwordRegex.test(formData.password)) {
@@ -148,7 +98,6 @@ const AccountInfo = () => {
           "Password must be at least 10 characters long, contain at least one capital letter, and may include symbols."
         );
       }
-
       if (formData.password !== formData.passwordre) {
         errors.push("Passwords do not match");
       }
@@ -159,12 +108,7 @@ const AccountInfo = () => {
       return;
     }
 
-    // Prepare the data object to be sent in the update
-    const updatedData: any = {
-      username: formData.username,
-    };
-
-    // Only include password if it is not empty and valid
+    const updatedData: any = { username: formData.username };
     if (formData.password.trim()) {
       const hashedPassword = await bcrypt.hash(formData.password, 10);
       updatedData.password = hashedPassword;
@@ -172,9 +116,7 @@ const AccountInfo = () => {
 
     const response = await fetch(`/api/users/${user._id}`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedData),
     });
 
@@ -187,221 +129,162 @@ const AccountInfo = () => {
   };
 
   return (
-    <div className="back-img fixed overflow-hidden overflow-y-auto bg-cover items-center w-full h-screen flex flex-col text-center">
-      <Link href={`/`} className="w-full pointer-events-none">
-        <h2 className="ml-4 mt-4 text-white pointer-events-auto text-2xl transition duration-100 p-1 rounded-full hover:scale-110">
-          &#8618; Home
-        </h2>
-      </Link>
-      {isSuccess && user && (
-        <div className="flex sm:flex-row flex-col grow sm:mx-10 mx-4 rounded-2xl shadow-lg mt-12 mb-[5.1rem] flex-1 relative bg-slate-300">
-          <UserOptions />
-          <div className="flex flex-col text-md items-center sm:mx-10 mx-0 gap-0 sm:mt-12 sm:mb-24 mb-8 mt-8">
-            {hasProvider ? (
-              <>
-                <div className="relative w-20 h-20 rounded-full overflow-hidden">
-                  <Image
-                    src={
-                      user.profilePicture || "/assets/images/default_avatar.jpg"
-                    }
-                    alt="User Avatar"
-                    className="object-cover"
-                    width={100}
-                    height={100}
-                    priority
-                  />
-                </div>
-                <form className="flex flex-col gap-4 mt-8 sm:w-80 w-60">
-                  <div className="flex sm:flex-row flex-col gap-2 items-center justify-between">
-                    <label htmlFor="name" className="text-blue-950 font-black">
-                      Username:{" "}
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={session?.user?.name || "No user name found"}
-                      className="text-blue-900 border border-blue-400 rounded-md p-1"
-                      autoComplete="off"
-                      disabled
-                    />
-                  </div>
-                  <div className="flex sm:flex-row flex-col gap-2 items-center justify-between">
-                    <label htmlFor="mail" className="text-blue-950 font-black">
-                      Email:{" "}
-                    </label>
-                    <input
-                      type="email"
-                      name="mail"
-                      value={session?.user?.email || "No email found"}
-                      className="text-blue-900 border border-blue-400 rounded-md p-1"
-                      disabled
-                    />
-                  </div>
-                  <div className="text-slate-200 flex justify-center sm:my-0 my-4">
-                    <div className="bg-slate-400 sm:w-full w-56 text-center p-4 rounded-lg">
-                      Nothing can be edited as you are connected with a
-                      provider.
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleDeleteAccount}
-                    className="bg-red-500 hover:bg-red-800 transition duration-200 text-white rounded-md sm:px-4 px-2 sm:py-2 py-4 mb-4"
-                  >
-                    Delete Account
-                  </button>
-                  {showPopup && (
-                    <Popup
-                      onConfirm={confirmDelete}
-                      onCancel={cancelDelete}
-                      isDeleting={isDeleting}
-                    />
-                  )}
-                </form>
-              </>
-            ) : (
-              <>
-                <div className="flex flex-col items-center">
-                  <div className="relative w-20 h-20 rounded-full overflow-hidden">
-                    <Image
-                      src={
-                        user?.profilePicture ||
-                        "/assets/images/default_avatar.jpg"
-                      }
-                      alt="User Avatar"
-                      className="object-cover"
-                      fill
-                      priority
-                    />
-                  </div>
-                  <div className="mt-2">
-                    <UploadButton
-                      className="ut-button:bg-slate-600 ut-button:hover:bg-slate-700"
-                      endpoint="imageUploader"
-                      onClientUploadComplete={async (res) => {
-                        const imageUrl = res[0].url;
-
-                        // Save the image URL to the backend (associate with user ID)
-                        await fetch("/api/saveImage", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({
-                            email: session?.user?.email, // Assuming you're using email as the identifier
-                            profilePicture: imageUrl,
-                          }),
-                        });
-                      }}
-                      onUploadError={(error: Error) => {
-                        // Do something with the error.
-                        alert(`ERROR! ${error.message}`);
-                      }}
-                    />
-                  </div>
-                </div>
-                <form
-                  onSubmit={handleSubmit}
-                  className="flex flex-col gap-4 mt-8"
-                >
-                  <div className="flex sm:flex-row flex-col gap-2 items-center justify-between">
-                    <label
-                      htmlFor="username"
-                      className="text-blue-950 font-black"
-                    >
-                      Username:{" "}
-                    </label>
-                    <input
-                      type="text"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleChange}
-                      className="text-blue-900 border border-blue-400 rounded-md p-1"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="flex sm:flex-row flex-col gap-2 items-center justify-between">
-                    <label htmlFor="email" className="text-blue-950 font-black">
-                      Email:{" "}
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="text-blue-900 border border-blue-400 rounded-md p-1"
-                      disabled
-                    />
-                  </div>
-                  <div className="flex sm:flex-row flex-col gap-2 items-center text-start justify-between">
-                    <label
-                      htmlFor="password"
-                      className="text-blue-950 font-black"
-                    >
-                      New Password:{" "}
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Enter new password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="text-blue-900 border border-blue-400 rounded-md p-1"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="flex sm:flex-row flex-col gap-2 items-center text-start justify-between">
-                    <label
-                      htmlFor="passwordre"
-                      className="text-blue-950 font-black"
-                    >
-                      Re-enter Password:{" "}
-                    </label>
-                    <input
-                      type="password"
-                      name="passwordre"
-                      placeholder="Re-enter password"
-                      value={formData.passwordre}
-                      onChange={handleChange}
-                      className="text-blue-900 border border-blue-400 rounded-md p-1"
-                      autoComplete="off"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="bg-blue-600 hover:bg-blue-800 transition duration-200 text-white rounded-md px-4 sm:py-2 py-4 mt-4"
-                  >
-                    Update
-                  </button>
-                  <button
-                    onClick={handleDeleteAccount}
-                    className="bg-red-500 hover:bg-red-800 transition duration-200 text-white rounded-md sm:px-4 px-2 sm:py-2 py-4 mb-4"
-                  >
-                    Delete Account
-                  </button>
-                  {showPopup && (
-                    <Popup
-                      onConfirm={confirmDelete}
-                      onCancel={cancelDelete}
-                      isDeleting={isDeleting}
-                    />
-                  )}
-                </form>
-              </>
-            )}
-            {errorMessages.length > 0 && (
-              <div className="text-red-600 flex justify-center">
-                <ul className="bg-red-200 w-full text-center p-4">
-                  {errorMessages.map((message, index) => (
-                    <li key={index}>{message}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+    <AccountPageShell show={!!user} isLoaded={isLoaded}>
+      {hasProvider ? (
+        <>
+          <div className="relative w-20 h-20 rounded-full overflow-hidden ring-2 ring-cyan-400/30 ring-offset-2 ring-offset-[#13131f]">
+            <Image
+              src={user.profilePicture || "/assets/images/default_avatar.jpg"}
+              alt="User Avatar"
+              className="object-cover"
+              width={80}
+              height={80}
+              priority
+            />
           </div>
-        </div>
+
+          <form className="flex flex-col gap-4 mt-8 w-full">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="name" className={labelClass}>Username</label>
+              <input
+                type="text"
+                name="name"
+                value={session?.user?.name || "No user name found"}
+                className={inputClass}
+                autoComplete="off"
+                disabled
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="mail" className={labelClass}>Email</label>
+              <input
+                type="email"
+                name="mail"
+                value={session?.user?.email || "No email found"}
+                className={inputClass}
+                disabled
+              />
+            </div>
+            <div className="bg-amber-900/20 border border-amber-500/20 text-amber-200/70 text-sm text-center p-4 rounded-lg">
+              Nothing can be edited as you are connected with a provider.
+            </div>
+            <button
+              onClick={handleDeleteAccount}
+              className="bg-red-600/80 hover:bg-red-700 transition duration-200 text-white rounded-lg px-4 py-2.5 font-medium border border-red-500/30 mt-2"
+            >
+              Delete Account
+            </button>
+            {showPopup && (
+              <Popup onConfirm={confirmDelete} onCancel={cancelDelete} isDeleting={isDeleting} />
+            )}
+          </form>
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative w-20 h-20 rounded-full overflow-hidden ring-2 ring-cyan-400/30 ring-offset-2 ring-offset-[#13131f]">
+              <Image
+                src={user?.profilePicture || "/assets/images/default_avatar.jpg"}
+                alt="User Avatar"
+                className="object-cover"
+                fill
+                priority
+              />
+            </div>
+            <UploadButton
+              className="ut-button:bg-cyan-700/80 ut-button:hover:bg-cyan-700 ut-button:rounded-lg ut-button:text-sm"
+              endpoint="imageUploader"
+              onClientUploadComplete={async (res) => {
+                const imageUrl = res[0].url;
+                await fetch("/api/saveImage", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    email: session?.user?.email,
+                    profilePicture: imageUrl,
+                  }),
+                });
+              }}
+              onUploadError={(error: Error) => {
+                alert(`ERROR! ${error.message}`);
+              }}
+            />
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-8 w-full">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="username" className={labelClass}>Username</label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                className={inputClass}
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="email" className={labelClass}>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={inputClass}
+                disabled
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="password" className={labelClass}>New Password</label>
+              <input
+                type="password"
+                name="password"
+                placeholder="Enter new password"
+                value={formData.password}
+                onChange={handleChange}
+                className={inputClass}
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="passwordre" className={labelClass}>Re-enter Password</label>
+              <input
+                type="password"
+                name="passwordre"
+                placeholder="Re-enter password"
+                value={formData.passwordre}
+                onChange={handleChange}
+                className={inputClass}
+                autoComplete="off"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-cyan-600 hover:bg-cyan-700 transition duration-200 text-white rounded-lg px-4 py-2.5 font-medium mt-2"
+            >
+              Update
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              className="bg-red-600/80 hover:bg-red-700 transition duration-200 text-white rounded-lg px-4 py-2.5 font-medium border border-red-500/30"
+            >
+              Delete Account
+            </button>
+            {showPopup && (
+              <Popup onConfirm={confirmDelete} onCancel={cancelDelete} isDeleting={isDeleting} />
+            )}
+          </form>
+        </>
       )}
-      {isLoaded && <Footer />}
-    </div>
+
+      {errorMessages.length > 0 && (
+        <ul className="bg-red-900/40 border border-red-500/30 text-red-300 text-sm text-center p-4 rounded-lg w-full mt-4">
+          {errorMessages.map((message, index) => (
+            <li key={index}>{message}</li>
+          ))}
+        </ul>
+      )}
+    </AccountPageShell>
   );
 };
 

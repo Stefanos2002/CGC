@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import clientPromise from "../../authDbConnection/mongo/page";
 import { IoStarSharp } from "react-icons/io5";
 import { User } from "../Constants/constants";
-import { PostResult, Genre, Platform } from "../Constants/constants";
+import { PostResult, Genre } from "../Constants/constants";
 
 declare global {
   var _gamesDbInitialized: boolean | undefined;
@@ -23,7 +23,9 @@ const getGameData = async (url: string, page: number) => {
     if (!res.ok) {
       console.error(`RAWG API returned ${res.status} for URL: ${fullUrl}`);
       if (res.status === 404) {
-        console.error("This might indicate an invalid API key or changed API endpoint");
+        console.error(
+          "This might indicate an invalid API key or changed API endpoint",
+        );
       }
       throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -62,13 +64,10 @@ const normalizeGameDocument = (game: any): PostResult => ({
 });
 
 const MIN_RELEASE_DATE = new Date("2000-01-01");
-const MAX_RELEASE_DATE = new Date();
 const MAX_STORED_GAMES = 2000;
-const MAINSTREAM_MIN_RATING = 3.8;
-const MAINSTREAM_MIN_METACRITIC = 60;
-const MAINSTREAM_RECENT_MONTHS = 18;
-const MAINSTREAM_RECENT_MIN_RATINGS = 15;
-const MAINSTREAM_ESTABLISHED_MIN_RATINGS = 200;
+const MAINSTREAM_MIN_RATING = 3; //3.8
+const MAINSTREAM_MIN_METACRITIC = 40; //20
+const MAINSTREAM_MIN_RATINGS = 10; //15
 const RANGE_PAGE_SIZE = 40;
 
 const EDITION_KEYWORDS = [
@@ -130,7 +129,7 @@ const isGameReleasedAndInRange = (game: Partial<PostResult>) => {
   if (!releaseDate) return false;
   const today = new Date();
   if (releaseDate > today) return false;
-  return releaseDate >= MIN_RELEASE_DATE && releaseDate <= MAX_RELEASE_DATE;
+  return releaseDate >= MIN_RELEASE_DATE && releaseDate <= new Date();
 };
 
 const isMainstreamGame = (game: Partial<PostResult>) => {
@@ -142,28 +141,10 @@ const isMainstreamGame = (game: Partial<PostResult>) => {
   const metacritic = Number(game.metacritic ?? 0);
   const ratingCount = Number(game.ratings_count ?? 0);
 
-  const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - MAINSTREAM_RECENT_MONTHS);
-  const releaseDate = parseDateString(game.released);
-  const isRecent = releaseDate !== null && releaseDate >= cutoff;
-  const minRatings = isRecent
-    ? MAINSTREAM_RECENT_MIN_RATINGS
-    : MAINSTREAM_ESTABLISHED_MIN_RATINGS;
-  if (ratingCount < minRatings) return false;
+  if (ratingCount < MAINSTREAM_MIN_RATINGS) return false;
   return (
     rating >= MAINSTREAM_MIN_RATING || metacritic >= MAINSTREAM_MIN_METACRITIC
   );
-};
-
-const isNotableGame = (game: Partial<PostResult>) => {
-  if (!isGameReleasedAndInRange(game)) return false;
-  if (isEditionVariant(game)) return false;
-  if (isAdultGame(game)) return false;
-  const rating = Number(game.rating ?? 0);
-  const metacritic = Number(game.metacritic ?? 0);
-  const ratingCount = Number(game.ratings_count ?? 0);
-  if (ratingCount < 50) return false;
-  return rating >= 3.5 || metacritic >= 50;
 };
 
 let cachedGames: PostResult[] | null =
@@ -248,7 +229,9 @@ export const seedGamesDB = async (): Promise<PostResult[]> => {
 
         if (!filteredResults.length) {
           if (page === 1) {
-            console.log(`No mainstream RAWG results for date range ${dateRange}`);
+            console.log(
+              `No mainstream RAWG results for date range ${dateRange}`,
+            );
           }
           if (gameResults.length < RANGE_PAGE_SIZE) break;
           continue;
@@ -273,24 +256,13 @@ export const seedGamesDB = async (): Promise<PostResult[]> => {
           });
 
           remainingSpace = Math.max(0, remainingSpace - gamesToInsert.length);
-          console.log(`Inserted ${gamesToInsert.length} games for ${dateRange} page ${page}`);
+          console.log(
+            `Inserted ${gamesToInsert.length} games for ${dateRange} page ${page}`,
+          );
         }
 
         if (gameResults.length < RANGE_PAGE_SIZE) break;
       }
-    }
-
-    if (remainingSpace > 0) {
-      const notableGames = existingDocs
-        .map(normalizeGameDocument)
-        .filter((game) => !existingIds.has(game.id) && isNotableGame(game))
-        .slice(0, remainingSpace);
-
-      notableGames.forEach((game) => {
-        existingIds.add(game.id);
-        allGames.push(game);
-      });
-      console.log(`Filled ${notableGames.length} notable games from DB`);
     }
 
     cachedGames = allGames.slice(0, MAX_STORED_GAMES);
@@ -311,7 +283,7 @@ export const sortGamesByRelease = (games: PostResult[]) => {
   return games.sort((a, b) => {
     const dateA = new Date(a.released);
     const dateB = new Date(b.released);
-    return dateB.getTime() - dateA.getTime();
+    return dateB.getTime() - dateA.getTime() || a.name.localeCompare(b.name);
   });
 };
 
@@ -342,7 +314,9 @@ const enrichGame = async (game: PostResult) => {
     if (hasFullDetails(game)) return game;
 
     const gameCollection = await getGamesCollection();
-    const existingGame = await gameCollection.findOne<PostResult>({ id: game.id });
+    const existingGame = await gameCollection.findOne<PostResult>({
+      id: game.id,
+    });
     if (existingGame && existingGame.description_raw) {
       return normalizeGameDocument({ ...existingGame, ...game });
     }
@@ -373,7 +347,9 @@ const enrichGame = async (game: PostResult) => {
 };
 
 // Layer 2 — Enrichment: lazily fetches and stores full details for a batch of games
-export const enrichGames = async (games: PostResult[]): Promise<PostResult[]> => {
+export const enrichGames = async (
+  games: PostResult[],
+): Promise<PostResult[]> => {
   if (!games.length) return [];
   const gameCollection = await getGamesCollection();
   const ids = games.map((g) => g.id);
@@ -399,9 +375,6 @@ const platformIds: { [key: string]: number } = {
   nintendo: 7,
 };
 
-const convertDocuments = (docs: PostResult[]) =>
-  docs.map(normalizeGameDocument);
-
 export const getGamesCollection = async (): Promise<Collection<Document>> => {
   try {
     const client = await clientPromise;
@@ -409,7 +382,10 @@ export const getGamesCollection = async (): Promise<Collection<Document>> => {
     const collection = db.collection("games");
     if (!global._gamesDbInitialized) {
       global._gamesDbInitialized = true;
-      await collection.createIndex({ id: 1 }, { unique: true, background: true });
+      await collection.createIndex(
+        { id: 1 },
+        { unique: true, background: true },
+      );
       await collection.createIndex({ slug: 1 }, { background: true });
       await collection.createIndex({ released: 1 }, { background: true });
       await collection.createIndex({ "genres.slug": 1 }, { background: true });
@@ -441,7 +417,7 @@ export const getGamesByPlatform = async (name: string) => {
     .project(minimalGameProjection)
     .toArray()) as PostResult[];
 
-  return convertDocuments(filteredGames);
+  return filteredGames.map(normalizeGameDocument).filter(isMainstreamGame);
 };
 
 export const getGamesByGenre = async (slug: string) => {
@@ -454,10 +430,13 @@ export const getGamesByGenre = async (slug: string) => {
     .project(minimalGameProjection)
     .toArray()) as PostResult[];
 
-  return convertDocuments(filteredGames);
+  return filteredGames.map(normalizeGameDocument).filter(isMainstreamGame);
 };
 
-export const getGamesByPlatformAndGenre = async (name: string, slug: string) => {
+export const getGamesByPlatformAndGenre = async (
+  name: string,
+  slug: string,
+) => {
   const platformId = platformIds[name.toLowerCase()];
   if (!platformId) {
     throw new Error(`Invalid platform name: ${name}`);
@@ -473,7 +452,7 @@ export const getGamesByPlatformAndGenre = async (name: string, slug: string) => 
     .project(minimalGameProjection)
     .toArray()) as PostResult[];
 
-  return convertDocuments(filteredGames);
+  return filteredGames.map(normalizeGameDocument).filter(isMainstreamGame);
 };
 
 export const paginateGames = (
@@ -575,9 +554,25 @@ export const searchGames = async (query: string): Promise<PostResult[]> => {
     })
     .project(minimalGameProjection)
     .toArray()) as PostResult[];
-  return docs.map(normalizeGameDocument);
+
+  const stripPunct = (s: string) => s.toLowerCase().replace(/[\s\-'.:,]+/g, "");
+  const q = stripPunct(normalized);
+  const sorted = docs.sort((a, b) => {
+    const aName = stripPunct(a.name);
+    const bName = stripPunct(b.name);
+    const aExact = aName === q;
+    const bExact = bName === q;
+    if (aExact !== bExact) return aExact ? -1 : 1;
+    const aStarts = aName.startsWith(q);
+    const bStarts = bName.startsWith(q);
+    if (aStarts !== bStarts) return aStarts ? -1 : 1;
+    return 0;
+  });
+
+  return sorted.filter(isMainstreamGame).map(normalizeGameDocument);
 };
 
+// https://api.rawg.io/api/games/3328/game-series?key=1cfc2b828ee34025a611a0cef051f7f1
 export const getGameBySlug = async (name: string) => {
   const gameCollection = await getGamesCollection();
 
@@ -619,7 +614,7 @@ export async function getScreenshots(slug: string) {
   try {
     const res = await fetch(
       `${basePosterUrl}/${slug}/screenshots?${apiPosterKey}`,
-      { cache: "no-store" },
+      { next: { revalidate: 86400 } },
     );
 
     if (!res.ok) {
@@ -633,3 +628,25 @@ export async function getScreenshots(slug: string) {
     return undefined;
   }
 }
+
+// export async function getRelatedGames(id: number) {
+//   try {
+//     const res = await fetch(
+//       `${basePosterUrl}/${id}/game-series?${apiPosterKey}`,
+//       { next: { revalidate: 86400 } },
+//     );
+
+//     if (!res.ok) {
+//       throw new Error(
+//         `Failed to fetch games from the same series: ${res.statusText}`,
+//       );
+//     }
+
+//     const data = await res.json();
+//     console.log(data.results);
+//     return data.results;
+//   } catch (error) {
+//     console.error("Error fetching games from the same series:", error);
+//     return undefined;
+//   }
+// }

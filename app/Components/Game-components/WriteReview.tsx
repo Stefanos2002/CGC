@@ -38,10 +38,10 @@ const WriteReview: React.FC<Info> = ({ game }) => {
     const fetchUser = async () => {
       if (session?.user?.email) {
         const response = await fetch(
-          `/api/getUserDetails/${session.user.email}`
+          `/api/getUserDetails/${session.user.email}`,
         );
         const data = await response.json();
-        if(data._id) {
+        if (data._id) {
           setUser(data);
         } else {
           console.error("Error fetching user details:", response.statusText);
@@ -56,10 +56,10 @@ const WriteReview: React.FC<Info> = ({ game }) => {
 
     const reviewData = {
       gameId: game?.id,
-      gameName: game?.name, // Game's name
-      selectedReaction, // Reaction's name
-      reviewText, // Text from the textarea
-      date: new Date(), // Current date
+      gameName: game?.name,
+      selectedReaction,
+      reviewText,
+      date: new Date(),
     };
 
     try {
@@ -75,10 +75,8 @@ const WriteReview: React.FC<Info> = ({ game }) => {
 
       if (response.ok) {
         setIsSubmitted(true);
-        console.log("Review submitted successfully:", data);
         setTimeout(() => {
           router.push(`/Games/${game.slug}`);
-          //this command is for the reviews to be updated automatically when navigating back to the game
           router.refresh();
         }, 2000);
       } else {
@@ -92,67 +90,72 @@ const WriteReview: React.FC<Info> = ({ game }) => {
 
   const sortedRatings = (game.ratings ?? []).sort((a, b) => b.id - a.id);
 
-  return isSubmitted ? (
-    <div className="bg-black w-full h-screen flex items-center justify-center">
-      <div className="text-slate-200 text-lg text-center">
-        Your review has been submitted successfully!<br></br>Going back to the
-        game
+  if (isSubmitted) {
+    return (
+      <div className="relative z-10 w-full min-h-screen flex items-center justify-center px-4">
+        <div className="text-slate-200 text-lg text-center bg-black/70 backdrop-blur-md p-10 rounded-2xl border border-neutral-700 shadow-xl shadow-black/50">
+          Your review has been submitted successfully!
+          <br />
+          Going back to the game…
+        </div>
       </div>
-    </div>
-  ) : (
-    <div className="flex flex-col items-center">
-      <Link
-        href={`/Games/${game.slug}`}
-        className="w-full invisible pointer-events-none"
-      >
-        <button className="ml-4 mt-4 pointer-events-auto text-xl text-white transition duration-100 hover:scale-110">
-          ...Back to the Game
-        </button>
-      </Link>
-      <form
-        className="flex mt-12 mx-10 mb-[5.1rem] flex-col flex-1 relative bg-neutral-200 rounded-2xl"
-        onSubmit={handleSubmit}
-      >
-        {/* Header of review */}
-        <div className="sm:p-8 p-4 flex flex-col gap-3 font-sans border-2 rounded-t-2xl bg-black w-full">
-          <span className="text-orange-400 font-extrabold sm:text-xl text-md">
-            Write a review
-          </span>
-          <span className="text-white sm:text-2xl text-xl">{game.name}</span>
+    );
+  }
+
+  return (
+    <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="flex flex-col items-center pt-8 pb-12 px-4 flex-1">
+        <div className="w-full max-w-2xl mb-4">
+          <Link
+            href={`/Games/${game.slug}`}
+            className="text-neutral-400 hover:text-white text-md transition-colors duration-200"
+          >
+            ← Back to {game.name}
+          </Link>
         </div>
-        {/* Start of reactions */}
-        <div className="sm:p-5 p-3 flex flex-wrap flex-row gap-3 font-serif border rounded-b-xl bg-black w-full">
-          {sortedRatings.map((rating: any) => (
-            <div
-              role="button"
-              onClick={() => handleReactionClick(rating.title)}
-              key={rating.id} // Use unique ID for the key
-              className={`flex transition-all duration-200 ${
-                selectedReaction === rating.title
-                  ? "bg-neutral-600"
-                  : "bg-black"
-              } hover:bg-neutral-600 items-center gap-2 border rounded-full pr-6 p-2`}
-            >
-              <span className="sm:text-xl text-lg">
-                {getReaction(rating.id)}
-              </span>
-              <span className="text-white text-lg">{rating.title}</span>
-            </div>
-          ))}
-        </div>
-        <textarea
-          className="text-lg pb-48 pt-8 px-8 rounded-t-2xl outline-none bg-neutral-200"
-          placeholder="Type Here..."
-          value={reviewText}
-          onChange={(e) => setReviewText(e.target.value)}
-        ></textarea>
-        <button
-          className="text-lg transition-all rounded-b-2xl duration-200 bg-neutral-400 hover:bg-neutral-500 p-3"
-          type="submit"
+        <form
+          className="flex flex-col w-full max-w-2xl bg-black/70 backdrop-blur-md rounded-2xl border border-neutral-700 shadow-xl shadow-black/50"
+          onSubmit={handleSubmit}
         >
-          Submit
-        </button>
-      </form>
+          <div className="p-6 border-b border-neutral-700">
+            <span className="text-orange-400 font-extrabold text-xs uppercase tracking-widest block mb-2">
+              Write a review
+            </span>
+            <span className="text-white text-2xl font-semibold">
+              {game.name}
+            </span>
+          </div>
+          <div className="p-5 flex flex-wrap gap-3 border-b border-neutral-700">
+            {sortedRatings.map((rating: any) => (
+              <div
+                role="button"
+                onClick={() => handleReactionClick(rating.title)}
+                key={rating.id}
+                className={`flex transition-all duration-200 cursor-pointer ${
+                  selectedReaction === rating.title
+                    ? "bg-neutral-600 border-neutral-500"
+                    : "bg-neutral-900 border-neutral-700"
+                } hover:bg-neutral-600 items-center gap-2 border rounded-full pr-5 pl-3 py-2`}
+              >
+                <span className="text-xl">{getReaction(rating.id)}</span>
+                <span className="text-white text-sm">{rating.title}</span>
+              </div>
+            ))}
+          </div>
+          <textarea
+            className="text-base pt-6 pb-6 px-6 min-h-[220px] outline-none bg-neutral-900/80 text-neutral-100 placeholder:text-neutral-500 resize-none rounded-none"
+            placeholder="Share your thoughts…"
+            value={reviewText}
+            onChange={(e) => setReviewText(e.target.value)}
+          />
+          <button
+            className="text-base transition-all rounded-b-2xl duration-200 bg-neutral-700 hover:bg-neutral-600 text-white p-3 font-medium"
+            type="submit"
+          >
+            Submit Review
+          </button>
+        </form>
+      </div>
       <Footer />
     </div>
   );

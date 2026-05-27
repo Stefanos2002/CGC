@@ -1,67 +1,49 @@
 "use client";
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { FiUser, FiFilm, FiLogOut } from "react-icons/fi";
+import { FaGamepad } from "react-icons/fa";
+
+const navItems = [
+  { href: "/Account/info", label: "Account Details", icon: <FiUser /> },
+  { href: "/Account/games", label: "Games", icon: <FaGamepad /> },
+  { href: "/Account/movies", label: "Movies", icon: <FiFilm /> },
+];
 
 const UserOptions = () => {
-  const { data: session } = useSession();
-  const [userId, setUserId] = useState<string>("");
-
-  useEffect(() => {
-    const fetchProfileDetails = async () => {
-      if (session?.user?.email) {
-        try {
-          const response = await fetch(
-            `/api/getUserDetails/${session.user.email}`
-          );
-
-          if (!response.ok) {
-            console.error("Error fetching user details:", response.statusText);
-            return;
-          }
-
-          // Parse the response as JSON
-          const data = await response.json();
-
-          // Check if the data contains a valid id
-          if (data?._id) {
-            setUserId(data._id);
-          } else {
-            console.log("No profile found for this user.");
-          }
-        } catch (error) {
-          console.error("Failed to fetch profile details:", error);
-        }
-      }
-    };
-
-    fetchProfileDetails();
-  }, [session?.user?.email]); // Only re-run this effect if the session changes\
+  const pathname = usePathname();
 
   return (
-    <div className="bg-[#23232e] sm:rounded-l-2xl sm:border-b-0 border-b-2 border-white sm:rounded-tr-sm rounded-t-md">
-      <ul className="text-[#b6b6b6] sm:pt-2 pt-0 sm:text-md text-md divide-y sm:divide-x-0 divide-x sm:border-none border border-white flex sm:flex-col flex-row flex-wrap">
-        <Link href={`/Account/info`} className="grow">
-          <li className="cursor-pointer w-full transition-all grow duration-200 hover:text-white p-4">
-            Account Details
-          </li>
-        </Link>
-        <Link href={`/Account/games`} className="grow">
-          <li className="cursor-pointer w-full transition-all grow duration-200 hover:text-white p-4 ">
-            Games
-          </li>
-        </Link>
-        <Link href={`/Account/movies`} className="grow">
-          <li className="cursor-pointer w-full transition-all duration-200 hover:text-white p-4">
-            Movies
-          </li>
-        </Link>
+    <div className="shrink-0 sm:w-52 w-full bg-[#0d0d18] border-b sm:border-b-0 sm:border-r border-white/10">
+      <ul className="flex sm:flex-col flex-row sm:py-3">
+        {navItems.map(({ href, label, icon }) => {
+          const active = pathname === href;
+          return (
+            <Link href={href} key={href} className="flex-1 sm:flex-none">
+              <li
+                className={`flex items-center gap-3 w-full px-5 sm:py-4 py-3 transition-all duration-200 cursor-pointer sm:border-l-2 border-b-2 sm:border-b-0 ${
+                  active
+                    ? "text-cyan-400 border-cyan-400 bg-cyan-400/5"
+                    : "text-neutral-400 border-transparent hover:text-white hover:bg-white/5"
+                } sm:justify-start justify-center`}
+              >
+                <span className="text-lg shrink-0">{icon}</span>
+                <span className="sm:inline hidden text-md font-medium">
+                  {label}
+                </span>
+              </li>
+            </Link>
+          );
+        })}
         <li
-          className="cursor-pointer w-full transition-all flex-1 duration-200 hover:text-white p-4 "
+          className="flex-1 sm:flex-none flex items-center gap-3 px-5 sm:py-4 py-3 text-neutral-400 hover:text-red-400 hover:bg-white/5 transition-all duration-200 cursor-pointer sm:border-l-2 border-b-2 sm:border-b-0 border-transparent sm:justify-start justify-center"
           onClick={() => signOut({ callbackUrl: "/" })}
         >
-          Sign out
+          <span className="text-lg shrink-0">
+            <FiLogOut />
+          </span>
+          <span className="sm:inline hidden text-sm font-medium">Sign out</span>
         </li>
       </ul>
     </div>

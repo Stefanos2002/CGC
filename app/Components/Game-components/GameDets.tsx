@@ -150,7 +150,7 @@ const GameDets = async ({ params }: { params: any }) => {
                       href={`/Games/${game.slug}/review`}
                       className="bg-neutral-600 hover:bg-neutral-800 py-1 px-4 rounded-xl transition-all duration-200 hover:scale-105"
                     >
-                      Write a review
+                      Add a review
                     </Link>
                     <AddToList gameName={game.slug} />
                   </div>
@@ -158,8 +158,7 @@ const GameDets = async ({ params }: { params: any }) => {
               ) : (
                 <div className="mt-4 flex w-full justify-center items-center">
                   <span className="bg-neutral-600 text-lg py-2 px-6 rounded-xl">
-                    Sign-in required to be able to write/read a review or add to
-                    your Library
+                    Sign in to review or save to Library
                   </span>
                 </div>
               )}

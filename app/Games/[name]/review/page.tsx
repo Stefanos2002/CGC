@@ -5,7 +5,8 @@ import NavBar from "@/app/Components/Game-components/NavBar";
 export default async function Games({ params }: { params: any }) {
   const games = await getGameBySlug(params.name);
   return (
-    <div className="w-full h-screen items-center bg-stone-700 overflow-hidden overflow-y-auto bg-cover ">
+    <div className="relative w-full min-h-screen overflow-y-auto">
+      <div className="bg-[url('/assets/images/back.jpg')] z-0 bg-cover fixed h-screen w-screen"></div>
       <NavBar />
       <WriteReview game={games} />
     </div>

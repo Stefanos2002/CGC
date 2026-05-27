@@ -53,7 +53,9 @@ const NavBar = () => {
     const fetchProfileDetails = async () => {
       if (!session?.user?.email) return;
       try {
-        const response = await fetch(`/api/getUserDetails/${session.user.email}`);
+        const response = await fetch(
+          `/api/getUserDetails/${session.user.email}`,
+        );
         if (!response.ok) return;
         const data = await response.json();
         if (data?._id) setUser(data);
@@ -73,7 +75,10 @@ const NavBar = () => {
     <nav className="w-full flex justify-between items-center sticky top-0 bg-black h-20 z-20">
       {/* Left: logo + avatar */}
       <div className="pl-4 flex items-center h-full gap-4 shrink-0 pointer-events-none">
-        <Link href="/" className="pointer-events-auto flex items-center justify-center">
+        <Link
+          href="/"
+          className="pointer-events-auto flex items-center justify-center"
+        >
           <GlareHover
             glareColor="#ffffff"
             glareOpacity={0.4}
@@ -95,43 +100,6 @@ const NavBar = () => {
             />
           </GlareHover>
         </Link>
-        {session && (
-          <div
-            className="relative pointer-events-none z-10 text-white max-[900px]:hidden"
-            ref={profileRef}
-          >
-            <div
-              className="pointer-events-auto flex flex-row items-center gap-1 cursor-pointer hover:brightness-75"
-              onClick={toggleProfile}
-            >
-              <Image
-                src={user?.profilePicture || defaultAvatar.src}
-                alt="image"
-                width={50}
-                height={50}
-                priority
-                className="rounded-full object-cover"
-              />
-              <IoIosArrowDown className="text-white text-2xl" />
-            </div>
-            <div
-              className={`pointer-events-auto absolute flex flex-col overflow-hidden -left-6 top-14 w-24 bg-white rounded-md shadow-lg transition-all duration-200 ${
-                showProfile ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-              }`}
-              style={{ transitionProperty: "max-height, opacity" }}
-              onClick={closeProfile}
-            >
-              <ul className="py-2 divide-y text-black">
-                <Link href="/Account/info">
-                  <li className="px-4 py-3 hover:bg-gray-100 cursor-pointer">Profile</li>
-                </Link>
-                <li className="px-3 text-md py-4 hover:bg-gray-100 cursor-pointer">
-                  <Logout />
-                </li>
-              </ul>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Center: search bar — hidden below md (768px) */}
@@ -149,12 +117,49 @@ const NavBar = () => {
           <AiOutlineSearch />
         </button>
 
-        {!session && (
+        {!session ? (
           <Link href="/Authentication/Signup">
             <button className="text-neutral-900 tracking-wide border bg-neutral-200 sm:text-lg text-sm transition delay-50 p-2 rounded-2xl hover:scale-105">
               Register
             </button>
           </Link>
+        ) : (
+          <div
+            className="relative pointer-events-none z-10 text-white max-[900px]:hidden"
+            ref={profileRef}
+          >
+            <div
+              className="pointer-events-auto flex flex-row items-center gap-1 cursor-pointer hover:brightness-75"
+              onClick={toggleProfile}
+            >
+              <Image
+                src={user?.profilePicture || defaultAvatar.src}
+                alt="image"
+                width={45}
+                height={50}
+                priority
+                className="rounded-full object-cover"
+              />
+            </div>
+            <div
+              className={`pointer-events-auto absolute flex flex-col overflow-hidden -left-6 top-14 w-24 bg-white rounded-md shadow-lg transition-all duration-200 ${
+                showProfile ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+              }`}
+              style={{ transitionProperty: "max-height, opacity" }}
+              onClick={closeProfile}
+            >
+              <ul className="py-2 divide-y text-black">
+                <Link href="/Account/info">
+                  <li className="px-4 py-3 hover:bg-gray-100 cursor-pointer">
+                    Profile
+                  </li>
+                </Link>
+                <li className="px-3 text-md py-4 hover:bg-gray-100 cursor-pointer">
+                  <Logout />
+                </li>
+              </ul>
+            </div>
+          </div>
         )}
 
         <button

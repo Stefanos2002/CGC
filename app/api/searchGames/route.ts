@@ -1,20 +1,27 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/authDbConnection/mongo/page";
 
 const EDITION_KEYWORDS_PATTERN = [
-  "director.?s cut", "definitive edition", "remastered?", "enhanced edition",
-  "royal edition", "complete edition", "game of the year", "goty edition",
-  "anniversary edition", "deluxe edition", "ultimate edition", "legendary edition",
-  "gold edition", "expanded edition", "extended edition", "redux",
+  "director.?s cut",
+  "definitive edition",
+  "remastered?",
+  "enhanced edition",
+  "royal edition",
+  "complete edition",
+  "game of the year",
+  "goty edition",
+  "anniversary edition",
+  "deluxe edition",
+  "ultimate edition",
+  "legendary edition",
+  "gold edition",
+  "expanded edition",
+  "extended edition",
+  "redux",
 ].join("|");
 
-// Builds a flexible regex tolerating apostrophes, colons, hyphens, compound words.
-// "spiderman" → matches "Spider-Man"; "assassins creed" → "Assassin's Creed";
-// "spider-man" → splits into ["spider","man"] joined by separator pattern.
 function buildFlexibleRegex(query: string): string {
-  // Replace special chars with spaces so "spider-man" becomes ["spider","man"]
-  // and "assassin's" becomes ["assassins"] etc.
   const normalized = query
     .replace(/[^\w\s]/g, " ")
     .replace(/\s+/g, " ")
@@ -47,11 +54,14 @@ export async function GET(req: NextRequest) {
 
     const flexibleRegex = buildFlexibleRegex(query);
 
+    const today = new Date().toISOString().split("T")[0];
     const games = await gameCollection
       .find({
         $and: [
           { name: { $regex: flexibleRegex, $options: "i" } },
           { name: { $not: { $regex: EDITION_KEYWORDS_PATTERN, $options: "i" } } },
+          { released: { $gte: "2000-01-01", $lte: today } },
+          { tba: { $ne: true } },
           {
             $or: [
               { esrb_rating: null },
@@ -68,11 +78,36 @@ export async function GET(req: NextRequest) {
         background_image: 1,
         released: 1,
         parent_platforms: 1,
+        rating: 1,
+        metacritic: 1,
+        ratings_count: 1,
       })
-      .limit(4)
+      .limit(30)
       .toArray();
 
-    return NextResponse.json({ results: games }, { status: 200 });
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 18);
+    const stripPunct = (s: string) => s.toLowerCase().replace(/[\s\-'.:,]+/g, "");
+    const q = stripPunct(query);
+    const sorted = games.filter((g) => {
+      const releaseDate = new Date(g.released);
+      const isRecent = releaseDate >= cutoff;
+      const minRatings = isRecent ? 15 : 200;
+      if ((g.ratings_count ?? 0) < minRatings) return false;
+      return (g.rating ?? 0) >= 3.8 || (g.metacritic ?? 0) >= 60;
+    }).sort((a, b) => {
+      const aName = stripPunct(a.name as string);
+      const bName = stripPunct(b.name as string);
+      const aExact = aName === q;
+      const bExact = bName === q;
+      if (aExact !== bExact) return aExact ? -1 : 1;
+      const aStarts = aName.startsWith(q);
+      const bStarts = bName.startsWith(q);
+      if (aStarts !== bStarts) return aStarts ? -1 : 1;
+      return aName.localeCompare(bName);
+    });
+
+    return NextResponse.json({ results: sorted.slice(0, 4) }, { status: 200 });
   } catch (error) {
     console.error("Error searching games:", error);
     return NextResponse.json(

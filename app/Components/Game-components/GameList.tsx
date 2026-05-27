@@ -44,8 +44,7 @@ const GameList: React.FC<GameListProps> = ({ paginatedGames }) => {
     <>
       <ul className="grid grid-cols-1 min-[550px]:grid-cols-2 min-[850px]:grid-cols-3 gap-6 mt-12 mb-12 w-full px-6 xl:px-16">
         {paginatedGames.map(
-          (item, index) =>
-            item.description_raw && (
+          (item, index) => (
               <li key={`${item._id}-${index}`}>
                 <Link
                   href={`/Games/${item.slug}`}

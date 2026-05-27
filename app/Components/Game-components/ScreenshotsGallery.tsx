@@ -15,7 +15,7 @@ interface ScreenshotsArray {
 const ScreenshotsGallery = ({ screenshots }: ScreenshotsArray) => {
   const [openModal, setOpenModal] = useState<Boolean>(false);
   const [index, setIndex] = useState<number>(0);
-  const [selectedImg, setSelectedImg] = useState<string>(screenshots[0].image);
+  const [selectedImg, setSelectedImg] = useState<string>(screenshots[0]?.image);
 
   const handleOpen = (index: number) => {
     setIndex(index);
