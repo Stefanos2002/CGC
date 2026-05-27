@@ -10,6 +10,7 @@ let db: Db | undefined;
 let users: Collection<User> | undefined;
 
 async function init(): Promise<void> {
+  if (db) return;
   try {
     client = await clientPromise;
     db = client.db();

@@ -4,7 +4,7 @@ import MainPage from "@/app/Components/Game-components/MainPage";
 import NavBar from "@/app/Components/Game-components/NavBar";
 import { pageSize } from "@/app/Constants/constants";
 import {
-  getAllGames,
+  seedGamesDB,
   getGamesByPlatform,
   getGamesByGenre,
   getGamesByPlatformAndGenre,
@@ -43,7 +43,7 @@ const Posts = async ({ params, searchParams }: PageProps) => {
     } else if (genre) {
       gameData = await getGamesByGenre(genre);
     } else {
-      gameData = await getAllGames();
+      gameData = await seedGamesDB();
     }
 
     if (sort === "name-first") {
