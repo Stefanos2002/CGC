@@ -1,4 +1,4 @@
-import { NextAuthOptions } from "next-auth";
+﻿import { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -74,7 +74,10 @@ export const authOptions: NextAuthOptions = {
             id: dbUser?._id?.toString() ?? "",
             email: user.email,
             name: user.name,
-            image: (user as { image?: string }).image ?? dbUser?.profilePicture ?? "",
+            image:
+              (user as { image?: string }).image ??
+              dbUser?.profilePicture ??
+              "",
           };
         } else {
           token.user = { ...user };
@@ -95,13 +98,10 @@ export const authOptions: NextAuthOptions = {
           // Check if the existing user was created via credentials or another provider
           let provider = existingUser.provider || "credentials"; // Default to "credentials" if undefined
 
-          // Check if the user is trying to sign in with an OAuth provider
-          if (["google", "github", "facebook"].includes(account.provider)) {
-            // If the account provider is OAuth but the user was created with credentials
-            if (provider === "credentials") {
-              return "/Signin?error=EmailInUse"; // If trying to sign up, redirect to Signup page with error
+          if (["github", "google"].includes(account.provider)) {
+            if (account.provider !== provider) {
+              return "/Signin?error=EmailInUse";
             }
-            // Allow sign-in if it's an OAuth provider and matches the existing user provider
             return true;
           }
           // If the user is signing in with credentials and the account was also created with credentials
