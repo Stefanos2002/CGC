@@ -1,5 +1,9 @@
 import { getScreenshots } from "@/app/Game Collection/functions";
-import ScreenshotsGallery from "./ScreenshotsGallery";
+import dynamic from "next/dynamic";
+
+const ScreenshotsGallery = dynamic(() => import("./ScreenshotsGallery"), {
+  ssr: false,
+});
 
 const Screenshots = async ({ params }: { params: any }) => {
   const screenshots = await getScreenshots(params.name);

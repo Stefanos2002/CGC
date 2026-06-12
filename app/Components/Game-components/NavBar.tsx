@@ -10,8 +10,14 @@ import Logout from "../Logout";
 import { useSession } from "next-auth/react";
 import defaultAvatar from "@/public/assets/images/default_avatar.jpg";
 import siteLogo from "@/public/assets/images/logo.webp";
-import SearchBar from "./SearchBar";
+import dynamic from "next/dynamic";
 import Image from "next/image";
+
+const SearchBar = dynamic(() => import("./SearchBar"), {
+  loading: () => (
+    <div className="h-10 w-full max-w-xl rounded-lg bg-white/5 animate-pulse" />
+  ),
+});
 import GlareHover from "@/components/GlareHover";
 import { TbMenuDeep } from "react-icons/tb";
 
@@ -186,6 +192,25 @@ const NavBar = () => {
               </div>
             </Link>
           ))}
+          {session && (
+            <div className="min-[900px]:hidden flex flex-col items-center gap-5">
+              <Link href="/Account/info">
+                <div
+                  className="pointer-events-auto flex flex-row items-center gap-1 cursor-pointer hover:brightness-75"
+                  onClick={toggleProfile}
+                >
+                  <Image
+                    src={user?.profilePicture || defaultAvatar.src}
+                    alt="image"
+                    width={45}
+                    height={50}
+                    priority
+                    className="rounded-full object-cover"
+                  />
+                </div>
+              </Link>
+            </div>
+          )}
           <Link href="/Games/page/1">
             <button
               className="font-bold text-white text-lg transition delay-50 p-2 rounded-full hover:scale-105"
@@ -194,18 +219,6 @@ const NavBar = () => {
               All Games
             </button>
           </Link>
-          {session && (
-            <div className="min-[900px]:hidden flex flex-col items-center gap-5">
-              <Link href="/Account/info">
-                <button className="text-cyan-400 uppercase italic font-black text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                  My Profile
-                </button>
-              </Link>
-              <div className="text-stone-200 text-lg transition delay-50 p-2 rounded-full hover:scale-110">
-                <Logout />
-              </div>
-            </div>
-          )}
         </ul>
       </div>
 

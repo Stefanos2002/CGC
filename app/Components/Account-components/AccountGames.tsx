@@ -1,7 +1,9 @@
 "use client";
 import React, { MouseEvent, useState } from "react";
 import AccountPageShell from "./AccountPageShell";
-import PopupForLib from "../Game-components/PopupForLib";
+import dynamic from "next/dynamic";
+
+const PopupForLib = dynamic(() => import("../Game-components/PopupForLib"), { ssr: false });
 import Image from "next/image";
 import { useAccountUser } from "./useAccountUser";
 

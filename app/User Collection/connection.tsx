@@ -15,6 +15,9 @@ async function init(): Promise<void> {
     client = await clientPromise;
     db = client.db();
     users = db.collection("users");
+    await users.createIndex({ email: 1 }, { unique: true });
+    await users.createIndex({ username: 1 }, { unique: true, sparse: true });
+    await users.createIndex({ verificationToken: 1 }, { sparse: true });
   } catch (error) {
     console.error("Error during initialization:", error);
     throw new Error("Failed to establish connection to database");

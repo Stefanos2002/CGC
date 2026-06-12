@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState, MouseEvent } from "react";
 import AccountPageShell from "./AccountPageShell";
-import Popup from "../Popup";
+import dynamic from "next/dynamic";
+
+const Popup = dynamic(() => import("../Popup"), { ssr: false });
 import bcrypt from "bcryptjs";
 import { UploadButton } from "@/app/Uploadthing/uploadthing";
 import { signOut } from "next-auth/react";
