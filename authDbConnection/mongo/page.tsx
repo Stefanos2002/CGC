@@ -5,7 +5,8 @@ const URI = process.env.MONGODB_URI as string;
 if (!URI) throw new Error("Please add your Mongo URI to .env.local file");
 
 const options: MongoClientOptions = {
-  maxPoolSize: 10,
+  maxPoolSize: 1,
+  minPoolSize: 0,
   serverSelectionTimeoutMS: 10000,
   socketTimeoutMS: 45000,
   connectTimeoutMS: 10000,
