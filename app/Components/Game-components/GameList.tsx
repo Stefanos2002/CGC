@@ -56,6 +56,7 @@ const GameList: React.FC<GameListProps> = ({ paginatedGames }) => {
                       alt={item.name}
                       className="object-cover group-hover:scale-105 transition duration-500 ease-in-out"
                       fill
+                      sizes="(max-width: 549px) 100vw, (max-width: 849px) 50vw, 33vw"
                     />
                   </div>
                   <div className="flex flex-col gap-2 px-4 py-3 bg-black/60">

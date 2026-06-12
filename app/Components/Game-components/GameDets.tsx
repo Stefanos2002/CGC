@@ -40,6 +40,7 @@ const GameDets = async ({ params }: { params: any }) => {
               alt={game.name}
               className="object-cover rounded-t-lg"
               fill
+              sizes="(max-width: 923px) 100vw, 50vw"
             />
           </div>
           <div className="relative flex flex-col -top-10">

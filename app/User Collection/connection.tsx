@@ -254,6 +254,33 @@ export const findAllUsers = async () => {
   return await users.find({}).toArray();
 };
 
+export const findUsersWithGameReviews = async () => {
+  if (!users) await init();
+  if (!users) throw new Error("Users collection is not initialized");
+
+  return await users
+    .find({}, { projection: { username: 1, name: 1, user_reviews: 1 } })
+    .toArray();
+};
+
+export const findUsersWithMovieReviews = async () => {
+  if (!users) await init();
+  if (!users) throw new Error("Users collection is not initialized");
+
+  return await users
+    .find({}, { projection: { username: 1, name: 1, user_movie_reviews: 1 } })
+    .toArray();
+};
+
+export const findUsersWithShowReviews = async () => {
+  if (!users) await init();
+  if (!users) throw new Error("Users collection is not initialized");
+
+  return await users
+    .find({}, { projection: { username: 1, name: 1, user_show_reviews: 1 } })
+    .toArray();
+};
+
 //FUNCTION TO UPDATE USER IMAGE
 export const updateUserImage = async (
   email: string,

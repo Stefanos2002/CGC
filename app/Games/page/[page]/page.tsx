@@ -12,7 +12,6 @@ import {
   paginateGames,
   extractGenres,
   sortGamesByRelease,
-  enrichGames,
   getCachedGenres,
 } from "@/app/Game Collection/functions";
 import Sort from "@/app/Components/Game-components/Sort";
@@ -56,7 +55,6 @@ const Posts = async ({ params, searchParams }: PageProps) => {
 
     const genres = genre ? await getCachedGenres() : extractGenres(gameData);
     const paginatedGames = paginateGames(gameData, page, pageSize);
-    const detailedGames = await enrichGames(paginatedGames);
 
     return (
       <div>
@@ -66,7 +64,7 @@ const Posts = async ({ params, searchParams }: PageProps) => {
             <Sort consoleName={consoleName} genre={genre} />
             <Genres genres={genres} consoleName={consoleName} />
           </div>
-          <GameList paginatedGames={detailedGames} />
+          <GameList paginatedGames={paginatedGames} />
           <Buttons
             link="/Games/page"
             page={page}

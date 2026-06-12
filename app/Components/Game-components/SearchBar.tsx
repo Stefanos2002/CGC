@@ -306,6 +306,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className }) => {
                     alt={result.name}
                     className="w-full h-full object-contain"
                     fill
+                    sizes="(max-width: 419px) 80px, (max-width: 639px) 112px, 176px"
                   />
                 )}
               </div>

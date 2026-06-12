@@ -20,7 +20,7 @@ const bundleAnalyzer = withBundleAnalyzer({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    unoptimized: true,
+    minimumCacheTTL: 2592000, // 30 days — RAWG images never change
     remotePatterns: [
       {
         protocol: "https",

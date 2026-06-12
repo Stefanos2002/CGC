@@ -1,5 +1,5 @@
 import { getGameBySlug, getUserReviews } from "@/app/Game Collection/functions";
-import { findAllUsers } from "@/app/User Collection/connection";
+import { findUsersWithGameReviews } from "@/app/User Collection/connection";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/authDbConnection/authOptions";
 import React from "react";
@@ -9,7 +9,7 @@ const UserReviews = async ({ params }: { params: any }) => {
   if (!session) return null;
 
   const game = await getGameBySlug(params.name);
-  const allUsers = await findAllUsers();
+  const allUsers = await findUsersWithGameReviews();
   const gameReviews = await getUserReviews(allUsers, game.id);
 
   return (

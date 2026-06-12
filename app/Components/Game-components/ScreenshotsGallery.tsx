@@ -56,6 +56,7 @@ const ScreenshotsGallery = ({ screenshots }: ScreenshotsArray) => {
                 alt={`game_screenshot_${item.id}`}
                 src={item.image}
                 fill
+                sizes="(max-width: 499px) 100vw, (max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw"
                 className="object-cover rounded-lg"
               />
             </div>
