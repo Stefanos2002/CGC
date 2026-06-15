@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import AddToWatchlist from "@/app/Components/Movie-components/AddToWatchlist";
 import Filter from "@/app/Components/Movie-components/Filter";
 // import Pages from "@/app/components/Movie-components/Pages";
 import { baseUrl, getVotecolor, imageURL, options } from "@/app/Constants/constants";
 import Link from "next/link";
 import { FaStar } from "react-icons/fa";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 interface Result {
   id: number;

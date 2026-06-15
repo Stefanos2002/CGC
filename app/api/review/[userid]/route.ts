@@ -22,12 +22,12 @@ export async function POST(
     );
 
     if (!result?._id) {
-      return NextResponse.json({ error: "User not found or review not added" });
+      return NextResponse.json({ error: "User not found or review not added" }, { status: 400 });
     }
 
     return NextResponse.json({ message: "Review added successfully" });
   } catch (error) {
     console.error("Error adding review:", error);
-    return NextResponse.json({ error: "Internal Server Error" });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

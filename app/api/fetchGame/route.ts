@@ -5,8 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const gameName = searchParams.get("gameName");
-  const apiPosterKey = process.env.NEXT_PUBLIC_API_KEY;
-  const basePosterUrl = process.env.NEXT_PUBLIC_BASE_POSTER_URL;
+  const apiPosterKey = process.env.POSTER_API_KEY;
+  const basePosterUrl = process.env.POSTER_BASE_URL;
 
   if (!gameName) {
     return NextResponse.json({ error: "Invalid game name" }, { status: 400 });

@@ -1,5 +1,6 @@
 import { findUserById, updateUserById } from "@/app/User Collection/connection";
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 
 export async function GET(
   req: NextRequest,
@@ -31,7 +32,7 @@ export async function PUT(
 
     // Only update password if it's provided and non-empty
     if (password && password.trim()) {
-      updatedFields.password = password;
+      updatedFields.password = await bcrypt.hash(password, 10);
     }
 
     // Update user in the database

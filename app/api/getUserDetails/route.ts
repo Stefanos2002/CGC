@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get("email");
 
   if (!email || typeof email !== "string") {
-    return NextResponse.json({ message: "Invalid email" });
+    return NextResponse.json({ message: "Invalid email" }, { status: 400 });
   }
 
   try {
@@ -16,11 +16,11 @@ export async function GET(req: NextRequest) {
     );
 
     if (!_id) {
-      return NextResponse.json({ message: "User not found" });
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
     return NextResponse.json({ _id, profilePicture, library, watchlist });
   } catch (error) {
     console.error("Error fetching User:", error);
-    return NextResponse.json({ message: "Internal server error" });
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

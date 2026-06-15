@@ -2,6 +2,12 @@
 User-agent: *
 Allow: /
 
+# *
+User-agent: *
+Disallow: /api/
+Disallow: /Account/
+Disallow: /Authentication/
+
 # Host
 Host: https://www.cinegame-critic.com
 

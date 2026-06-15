@@ -11,13 +11,13 @@ export async function POST(req: NextRequest) {
 
     // Ensure we have both email and profilePicture from the client
     if (!email || !profilePicture) {
-      return NextResponse.json({ message: "Missing email or profile picture URL" });
+      return NextResponse.json({ message: "Missing email or profile picture URL" }, { status: 400 });
     }
 
     const updatedUserImage = await updateUserImage(email, profilePicture);
 
     if (!updatedUserImage) {
-      return NextResponse.json({ message: "User not found" });
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({
@@ -26,6 +26,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Error updating profile picture:", error);
-    return NextResponse.json({ message: "Internal server error" });
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

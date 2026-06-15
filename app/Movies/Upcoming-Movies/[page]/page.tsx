@@ -43,6 +43,7 @@ const UpComing = async ({ params }: { params: { page: string } }) => {
   return (
     <div className="overflow-hidden">
       <Filter />
+      <h1 className="sr-only">Upcoming Movies</h1>
       <div className="flex justify-end mr-10 mt-2">
         <Link
           href={"/Movies/TVShows/Upcoming-tvshows/1"}

@@ -19,6 +19,7 @@ const Trending = async () => {
   return (
     <div className="overflow-hidden">
       <Filter />
+      <h1 className="sr-only">Trending Movies</h1>
       <div className="flex justify-end mr-10 mt-2">
         <Link
           href={"/Movies/TVShows/Trending"}

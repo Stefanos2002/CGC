@@ -11,8 +11,8 @@ declare global {
   var _lastUpdated: Date | null | undefined;
 }
 
-const basePosterUrl = process.env.NEXT_PUBLIC_BASE_POSTER_URL;
-const apiPosterKey = process.env.NEXT_PUBLIC_API_KEY;
+const basePosterUrl = process.env.POSTER_BASE_URL;
+const apiPosterKey = process.env.POSTER_API_KEY;
 const apiPosterUrl = `${basePosterUrl}?${apiPosterKey}`;
 
 const getGameData = async (url: string, page: number) => {
